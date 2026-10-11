@@ -1,14 +1,33 @@
-# Video Extract 配置文件
+# vedioNoter 配置文件
 # 修改此文件即可调整所有默认参数，无需改动代码
 
 # -----------------------------------------------------------
-# DeepSeek API 配置
+# 通用 LLM 接口配置 (兼容 OpenAI / DeepSeek / 硅基流动 / 通义千问 / Ollama 等)
 # -----------------------------------------------------------
+llm:
+  provider: "deepseek"                           # 服务商预设: deepseek / openai / siliconflow / qwen / moonshot / zhipu / ollama / openrouter / custom
+  api_key: ""                                    # 在此填入你的 API key，或设置环境变量 DEEPSEEK_API_KEY / OPENAI_API_KEY
+  base_url: "https://api.deepseek.com"           # API 端点地址 (支持兼容 OpenAI /v1 协议的任意端点)
+  model: "deepseek-chat"                         # 默认整理模型 (可通过设置面板点击自动获取)
+  temperature: 0.3                               # 生成随机度 (0.0 ~ 1.0)
+  max_tokens: 8192                               # 单次生成最大 token 数
+  max_chars_per_chunk: 30000                     # 单次分块最大输入字符数
+
+# 兼容旧版配置字段
 deepseek:
-  api_key: ""                                    # 在此填入你的 API key，或设置环境变量 DEEPSEEK_API_KEY
+  api_key: ""
   base_url: "https://api.deepseek.com"
-  model: "deepseek-v4-pro"
-  max_chars_per_chunk: 30000                     # 单次 API 调用最大字符数
+  model: "deepseek-chat"
+  max_chars_per_chunk: 30000
+
+# -----------------------------------------------------------
+# 存储与目录配置 (Storage Directories)
+# -----------------------------------------------------------
+storage:
+  video_dir: "vedio"                             # 视频输入导入目录 (支持绝对路径如 D:/Videos 或相对路径)
+  audio_temp_dir: "audio_temp"                   # 音频提取临时缓存目录
+  transcript_dir: "output"                       # 语音撰写/转写文本输出目录
+  note_dir: "output"                             # AI 结构化学习笔记输出目录
 
 # -----------------------------------------------------------
 # Whisper 语音识别配置

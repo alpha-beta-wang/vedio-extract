@@ -1,4 +1,4 @@
-"""Flask 后端 —— 视频上传、转码、笔记整理的 Web API。"""
+"""Flask 后端 —— 视频上传、转码、笔记整理的 Web API，支持通用 LLM 与动态存储目录。"""
 
 import json
 import os
@@ -11,10 +11,22 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from config import get_api_key, get_server_host, get_server_port
-from flask import Flask, request, jsonify, send_from_directory, send_file
+import requests
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
+from config import (
+    get_api_key,
+    get_server_host,
+    get_server_port,
+    get_raw_config,
+    save_config,
+    get_video_dir,
+    get_audio_temp_dir,
+    get_transcript_dir,
+    get_note_dir,
+    get_llm_config,
+)
 from web.backend.tasks import (
     get_task,
     start_summarization,
@@ -25,11 +37,6 @@ from web.backend.tasks import (
 app = Flask(__name__, static_folder=None)
 CORS(app)
 
-VEDIO_DIR = PROJECT_DIR / "vedio"
-OUTPUT_DIR = PROJECT_DIR / "output"
-VEDIO_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
-
 
 # ============================================================
 # 视频管理
@@ -38,12 +45,16 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 @app.route("/api/videos", methods=["GET"])
 def list_videos():
     """列出所有视频及其状态。"""
+    video_dir = get_video_dir()
+    transcript_dir = get_transcript_dir()
+    note_dir = get_note_dir()
+
     videos = []
-    for f in sorted(VEDIO_DIR.glob("*.mp4")):
+    for f in sorted(video_dir.glob("*.mp4")):
         if f.name.startswith("."):
             continue
-        md = OUTPUT_DIR / f"{f.stem}.md"
-        note = OUTPUT_DIR / f"{f.stem}.note.md"
+        md = transcript_dir / f"{f.stem}.md"
+        note = note_dir / f"{f.stem}.note.md"
         videos.append({
             "name": f.name,
             "size_mb": round(f.stat().st_size / 1024 / 1024, 1),
@@ -55,7 +66,7 @@ def list_videos():
 
 @app.route("/api/upload", methods=["POST"])
 def upload_video():
-    """上传视频文件。"""
+    """上传视频文件到当前配置的视频目录。"""
     if "file" not in request.files:
         return jsonify({"error": "未选择文件"}), 400
 
@@ -63,7 +74,8 @@ def upload_video():
     if not file.filename.endswith(".mp4"):
         return jsonify({"error": "仅支持 .mp4 文件"}), 400
 
-    path = VEDIO_DIR / file.filename
+    video_dir = get_video_dir()
+    path = video_dir / file.filename
     file.save(str(path))
     return jsonify({
         "name": file.filename,
@@ -73,13 +85,23 @@ def upload_video():
 
 @app.route("/api/videos/<name>", methods=["DELETE"])
 def delete_video(name: str):
-    """删除视频及相关文件。"""
+    """删除视频及相关转录、笔记、音频缓存文件。"""
     stem = Path(name).stem
-    for d in [VEDIO_DIR, OUTPUT_DIR, PROJECT_DIR / "audio_temp"]:
-        for ext in [".mp4", ".md", ".note.md", ".wav"]:
-            p = d / f"{stem}{ext}"
+    dirs_to_check = [
+        (get_video_dir(), [".mp4", ".mov", ".mkv", ".flv", ".webm", ".avi"]),
+        (get_transcript_dir(), [".md"]),
+        (get_note_dir(), [".note.md"]),
+        (get_audio_temp_dir(), [".wav"]),
+    ]
+
+    for directory, exts in dirs_to_check:
+        for ext in exts:
+            p = directory / f"{stem}{ext}"
             if p.exists():
-                p.unlink()
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
     return jsonify({"ok": True})
 
 
@@ -89,35 +111,43 @@ def delete_video(name: str):
 
 @app.route("/api/transcribe/<name>", methods=["POST"])
 def start_transcribe(name: str):
-    """启动转录任务。"""
-    video_path = VEDIO_DIR / name
+    """启动语音转录任务。"""
+    video_dir = get_video_dir()
+    video_path = video_dir / name
     if not video_path.exists():
-        return jsonify({"error": "视频不存在"}), 404
+        return jsonify({"error": f"视频不存在于目录: {video_dir}"}), 404
 
     data = request.get_json(silent=True) or {}
     model = data.get("model", "small")
     lang = data.get("language") or None
     language = lang if lang and lang != "auto" else None
-    extract_frames = data.get("extract_frames", False)
+    extract_frames = bool(data.get("extract_frames", False))
 
-    task_id = start_transcription(video_path, PROJECT_DIR, model, language or None, extract_frames)
+    task_id = start_transcription(
+        video_path, PROJECT_DIR, model, language, extract_frames
+    )
     return jsonify({"task_id": task_id})
 
 
 @app.route("/api/summarize/<name>", methods=["POST"])
 def start_summarize(name: str):
-    """启动笔记整理任务。"""
-    md_path = OUTPUT_DIR / name
+    """启动通用 LLM 笔记整理任务。"""
+    stem = Path(name).stem
+    transcript_dir = get_transcript_dir()
+    md_path = transcript_dir / f"{stem}.md"
     if not md_path.exists():
-        md_path = OUTPUT_DIR / f"{Path(name).stem}.md"
-    if not md_path.exists():
-        return jsonify({"error": "转录文件不存在，请先转码"}), 404
+        # 兼容原 output 目录搜索
+        alt_path = PROJECT_DIR / "output" / f"{stem}.md"
+        if alt_path.exists():
+            md_path = alt_path
+        else:
+            return jsonify({"error": f"转录文件不存在，请先执行转录 (查找路径: {md_path})"}), 404
 
     data = request.get_json(silent=True) or {}
     api_key = data.get("api_key") or get_api_key()
-    style = data.get("style") or "general"
+    style = data.get("style", "general")
 
-    task_id = start_summarization(md_path, PROJECT_DIR, api_key, style)
+    task_id = start_summarization(md_path, PROJECT_DIR, api_key, style=style)
     return jsonify({"task_id": task_id})
 
 
@@ -132,18 +162,21 @@ def poll_task(task_id: str):
 
 @app.route("/api/transcript/<name>", methods=["GET"])
 def get_transcript(name: str):
-    """获取转录文本。"""
-    md_path = OUTPUT_DIR / f"{Path(name).stem}.md"
+    """获取转录文本内容。"""
+    stem = Path(name).stem
+    transcript_dir = get_transcript_dir()
+    md_path = transcript_dir / f"{stem}.md"
     if not md_path.exists():
-        return jsonify({"error": "转录不存在"}), 404
+        alt = PROJECT_DIR / "output" / f"{stem}.md"
+        if alt.exists():
+            md_path = alt
+        else:
+            return jsonify({"error": "转录文件不存在"}), 404
 
     raw = md_path.read_text(encoding="utf-8")
-
-    # 返回结构化数据：分离全文和时间戳
     full_text = raw
     ts_section = ""
 
-    # 提取时间戳部分
     m = re.search(r"(##\s*带时间戳的转录.*)", raw, re.DOTALL)
     if m:
         ts_section = m.group(1)
@@ -154,78 +187,142 @@ def get_transcript(name: str):
 
 @app.route("/api/note/<name>", methods=["GET"])
 def get_note(name: str):
-    """获取整理后的学习笔记。"""
+    """获取整理后的学习笔记内容。"""
     stem = Path(name).stem
-    note_path = OUTPUT_DIR / f"{stem}.note.md"
+    note_dir = get_note_dir()
+    note_path = note_dir / f"{stem}.note.md"
     if not note_path.exists():
-        return jsonify({"error": "笔记不存在"}), 404
+        alt = PROJECT_DIR / "output" / f"{stem}.note.md"
+        if alt.exists():
+            note_path = alt
+        else:
+            return jsonify({"error": "笔记不存在"}), 404
 
     raw = note_path.read_text(encoding="utf-8")
     return jsonify({"content": raw})
 
 
 # ============================================================
-# 关键帧图片
+# 通用 LLM 模型列表获取接口 (类似 CC Switch / OpenAI /models)
 # ============================================================
 
-FRAMES_DIR = OUTPUT_DIR / "frames"
+@app.route("/api/llm/models", methods=["POST"])
+def fetch_llm_models():
+    """获取通用 OpenAI 兼容服务商的模型列表。"""
+    data = request.get_json(silent=True) or {}
+    llm_cfg = get_llm_config()
+    base_url = (data.get("base_url") or llm_cfg["base_url"]).strip().rstrip("/")
+    api_key = data.get("api_key") or llm_cfg["api_key"]
 
+    if not base_url:
+        return jsonify({"ok": False, "error": "缺少 API Base URL"}), 400
 
-@app.route("/api/frames/<path:subpath>")
-def serve_frame(subpath: str):
-    """提供提取的关键帧图片。"""
-    file_path = FRAMES_DIR / subpath
-    if not file_path.exists() or not file_path.is_file():
-        return jsonify({"error": "图片不存在"}), 404
-    return send_file(str(file_path))
+    clean_url = re.sub(r"/chat/completions/?$", "", base_url)
+    clean_url = re.sub(r"/models/?$", "", clean_url)
+
+    # 构造探测列表
+    candidates = []
+    if clean_url.endswith("/v1"):
+        candidates.append(f"{clean_url}/models")
+    else:
+        candidates.append(f"{clean_url}/models")
+        candidates.append(f"{clean_url}/v1/models")
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    models = []
+    last_err = ""
+
+    for url in candidates:
+        try:
+            resp = requests.get(url, headers=headers, timeout=12)
+            if resp.status_code == 200:
+                res_data = resp.json()
+                raw_list = []
+                if "data" in res_data and isinstance(res_data["data"], list):
+                    raw_list = res_data["data"]
+                elif "models" in res_data and isinstance(res_data["models"], list):
+                    raw_list = res_data["models"]
+
+                for item in raw_list:
+                    if isinstance(item, dict):
+                        m_id = item.get("id") or item.get("name")
+                        if m_id:
+                            models.append(str(m_id))
+                    elif isinstance(item, str):
+                        models.append(item)
+
+                if models:
+                    break
+            else:
+                last_err = f"HTTP {resp.status_code}: {resp.text[:100]}"
+        except Exception as e:
+            last_err = str(e)
+
+    if models:
+        unique_models = sorted(list(set(models)))
+        return jsonify({"ok": True, "models": unique_models})
+    else:
+        return jsonify({
+            "ok": False,
+            "error": f"无法自动获取模型列表（{last_err or '服务商未提供公开 /models 接口'}），您可以手动输入模型名称。",
+        })
 
 
 # ============================================================
-# 桌面与系统管理接口 (Desktop API)
+# 桌面专属配置 & 系统集成
 # ============================================================
-
-@app.route("/api/health", methods=["GET"])
-def health_check():
-    """桌面端探针接口。"""
-    return jsonify({"status": "ok", "platform": sys.platform})
-
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
-    """获取系统当前配置。"""
-    from config import get_raw_config
+    """获取当前系统配置。"""
     return jsonify(get_raw_config())
 
 
 @app.route("/api/config", methods=["POST"])
 def update_config():
     """更新配置并写回 config.yaml。"""
-    from config import get_raw_config, save_config
     data = request.get_json(silent=True) or {}
     current = get_raw_config()
-    for section in ["deepseek", "whisper", "keyframe", "server"]:
+    for section in ["llm", "deepseek", "storage", "whisper", "keyframe", "server"]:
         if section in data and isinstance(data[section], dict):
             current.setdefault(section, {}).update(data[section])
     save_config(current)
-    return jsonify({"ok": True, "config": current})
+    return jsonify({"ok": True, "config": get_raw_config()})
 
 
 @app.route("/api/open-folder", methods=["POST"])
 def open_folder():
-    """跨平台在系统文件管理器中打开或定位目录/文件（Win Explorer / macOS Finder）。"""
+    """跨平台在系统文件管理器中打开指定目录（Win Explorer / macOS Finder）。"""
     import platform
     import subprocess
 
     data = request.get_json(silent=True) or {}
-    target_type = data.get("type", "output")
+    target_type = data.get("type", "transcript")
     file_name = data.get("name")
+    custom_path = data.get("path")
 
-    if target_type == "output":
-        target = OUTPUT_DIR
-    elif target_type == "vedio":
-        target = VEDIO_DIR
+    if custom_path:
+        target = Path(custom_path)
+        if not target.is_absolute():
+            target = PROJECT_DIR / target
+    elif target_type in ("video", "vedio"):
+        target = get_video_dir()
+    elif target_type == "audio":
+        target = get_audio_temp_dir()
+    elif target_type == "note":
+        target = get_note_dir()
+    elif target_type in ("transcript", "output"):
+        target = get_transcript_dir()
     else:
         target = PROJECT_DIR
+
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
     if file_name:
         candidate = target / file_name
@@ -253,7 +350,7 @@ def open_folder():
 
 @app.route("/api/import-file", methods=["POST"])
 def import_local_file():
-    """桌面端直接导入本地视频文件（复制到 vedio 目录）。"""
+    """桌面端直接导入本地视频文件（复制到当前配置的视频目录）。"""
     data = request.get_json(silent=True) or {}
     file_path = data.get("path")
     if not file_path:
@@ -267,7 +364,8 @@ def import_local_file():
     if src.suffix.lower() not in allowed_exts:
         return jsonify({"error": f"不支持的文件格式: {src.suffix}"}), 400
 
-    dest = VEDIO_DIR / src.name
+    video_dir = get_video_dir()
+    dest = video_dir / src.name
     if not dest.exists():
         shutil.copy2(str(src), str(dest))
 
@@ -285,6 +383,7 @@ def system_info():
     ffmpeg_exe = PROJECT_DIR / "tools" / "ffmpeg" / ("ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg")
 
     return jsonify({
+        "app_name": "vedioNoter",
         "os": platform.system(),
         "arch": platform.machine(),
         "cpu_count": os.cpu_count() or 1,
@@ -311,16 +410,18 @@ def serve_frontend(path: str):
     if path and file_path.exists() and file_path.is_file():
         return send_file(str(file_path))
 
-    # SPA fallback
     return send_file(str(FRONTEND_DIST / "index.html"))
 
 
 def main():
     host = get_server_host()
     port = get_server_port()
-    print(f"启动服务: http://localhost:{port}")
-    print(f"视频目录: {VEDIO_DIR}")
-    print(f"输出目录: {OUTPUT_DIR}")
+    print(f"======================================================")
+    print(f"  vedioNoter 服务启动: http://localhost:{port}")
+    print(f"  视频目录: {get_video_dir()}")
+    print(f"  撰写输出: {get_transcript_dir()}")
+    print(f"  笔记输出: {get_note_dir()}")
+    print(f"======================================================")
     app.run(host=host, port=port, debug=True)
 
 
