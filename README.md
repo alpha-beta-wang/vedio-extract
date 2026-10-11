@@ -1,12 +1,13 @@
-# Video to Markdown —— Video Speech Transcription & AI Note Generator
+# vedioNoter —— Video Speech Transcription & Academic Note Generator
 
 [English](README.md) | [简体中文](README_CN.md)
 
-Batch transcribe MP4 videos into high-precision Markdown documents, and transform raw transcripts into comprehensive, structured academic study notes using Large Language Models. Supports CLI workflow, Web interface, and **native desktop applications for Windows & macOS**.
+**vedioNoter** batch-transcribes MP4 videos into high-precision Markdown documents, and transforms raw transcripts into comprehensive, structured academic study notes using Large Language Models. Supports CLI workflow, Web interface, and **native cross-platform desktop applications for Windows & macOS**.
 
 * **Local Offline Engine**: Powered by [whisper.cpp](https://github.com/ggml-org/whisper.cpp) for fast, offline speech recognition (no GPU or internet required), coupled with `ffmpeg` for automatic audio extraction and normalization.
-* **Deep AI Note Synthesis**: Integrates DeepSeek LLM to restructure spoken transcriptions into structured study notes while preserving technical derivations, intuition, and illustrations.
-* **Native Desktop Client**: Includes a standard Windows **NSIS Setup Installer** (`.exe`), a portable ZIP package, and a one-click launcher for macOS, complete with in-app settings management.
+* **Universal LLM Integration (OpenAI-Compatible)**: Supports DeepSeek, OpenAI, SiliconFlow, Alibaba Qwen/DashScope, Moonshot/Kimi, Zhipu GLM, Ollama (local), OpenRouter, and custom endpoints, featuring live model discovery and preset switching.
+* **Customizable Storage & Output Directories**: Configure video input, audio temp cache, transcript text, and study note directories independently, with one-click folder exploration.
+* **Native Desktop Client**: Includes a standard Windows **NSIS Setup Installer** (`.exe`), portable unpacked folder, and macOS application (DMG/ZIP), with in-app settings management.
 
 ---
 
@@ -19,24 +20,35 @@ Batch transcribe MP4 videos into high-precision Markdown documents, and transfor
 - **Optional Keyframe Extraction**: Utilizes `ffmpeg` scene detection to extract representative frames and embed them directly into the Markdown notes.
 
 ### 2. Deep Academic Note Synthesis (`summarize.py` / `summarizer/` package)
-- Formats unstructured transcripts into coherent academic notes using DeepSeek LLM.
+- Formats unstructured transcripts into coherent academic notes using universal LLMs.
 - **Multiple Note Styles**:
   - **STEM / Theoretical Derivations**: Preserves mathematical and physical derivations step-by-step, intuitive physical analogies, LaTeX formulas, and ASCII diagrams without skipping steps or omitting examples.
   - **Mechanisms & Architecture**: Focuses on system bottlenecks, topological flowcharts, algorithms, and practical debugging guides.
   - **General**: Fixes homophone typos, cleans spoken redundancies, and organizes content into hierarchical sections with key summaries.
 - Handles ultra-long video transcripts via chunking and intelligent hierarchical merging.
 
-### 3. Cross-Platform Desktop Client (`desktop/` / `release/`)
-- **Windows Native Setup Installer**: Standard Windows installer (`Video Extract Setup 1.0.0.exe`, ~80MB) featuring an installation wizard, customizable installation directory, Start Menu and Desktop shortcuts, and Control Panel uninstaller registration.
-- **Portable Edition**: Pre-assembled portable executable at `release/VideoExtract-win-x64/VideoExtract.exe` and ZIP archive `release/VideoExtract-Windows-x64.zip` for instant zero-install use.
-- **macOS Native Integration**: Run via `./start_desktop.sh` with native frameless traffic light window buttons.
-- **GUI Settings Panel**: Configure DeepSeek API keys, LLM models, and Whisper models directly in the UI without editing configuration files.
-- **One-Click Directory Navigation**: Open the `output/` folder and explore generated notes with a single click.
+### 3. Universal LLM Provider Hub (CC Switch Style)
+- **Built-in Presets**: DeepSeek, OpenAI, SiliconFlow, Alibaba Qwen, Moonshot/Kimi, Zhipu GLM, Ollama (Local), OpenRouter, and Custom.
+- **Live Model List Fetching**: Click "获取在线模型列表" (Fetch Models) to query live `/v1/models` from your provider endpoint and select from the dropdown.
+- **Customizable Parameters**: Adjust temperature, max token limits, and custom base URLs.
 
-### 4. Interactive Web Interface (`web/`)
+### 4. Fully Configurable Storage Directories
+- **Video Input Directory (`video_dir`)**: Where `.mp4` source videos are scanned and uploaded.
+- **Transcript Directory (`transcript_dir`)**: Where Whisper transcripts and extracted keyframe images are stored.
+- **Note Directory (`note_dir`)**: Where AI-generated study notes (`.note.md`) are saved.
+- **Audio Temp Directory (`audio_temp_dir`)**: Where intermediate 16kHz audio caches are stored.
+- All directories can be selected via native OS file dialogs and opened directly in Explorer/Finder.
+
+### 5. Cross-Platform Desktop Client (`desktop/` / `release/`)
+- **Windows Native Setup Installer**: Standard installer (`release/vedioNoter-Setup-1.0.0.exe`) with customizable install directory, Start Menu and Desktop shortcuts, and Control Panel uninstaller registration.
+- **Windows Portable Edition**: Pre-assembled portable executable at `release/vedioNoter-win-x64/vedioNoter.exe`.
+- **macOS Native Integration**: Run via `./start_desktop.sh` or install `vedioNoter-1.0.0-mac.dmg`.
+- **GUI Settings Modal**: Visually manage API keys, LLM providers, model selection, Whisper models, and storage folders.
+
+### 6. Interactive Web Interface (`web/`)
 - Built with React 19 and Tailwind CSS.
 - Drag-and-drop video upload with real-time task progress tracking.
-- Split-screen comparison view: read raw transcripts (with timestamp view) side-by-side with rendered Markdown notes.
+- Dual-pane view: read raw transcripts (with timestamp view) side-by-side with rendered Markdown notes.
 
 ---
 
@@ -53,7 +65,7 @@ vedio_extract/
 ├── summarize.py                   # Note summarization CLI script
 ├── summarizer/                    # Note summarization Python package
 │   ├── __init__.py
-│   ├── api.py                     # DeepSeek API client (via requests)
+│   ├── api.py                     # Universal OpenAI-compatible LLM client
 │   ├── prompts.py                 # Structured system prompts (General / STEM / Architecture)
 │   ├── processor.py               # Text chunking, API orchestration, and merging
 │   └── io.py                      # Markdown reading and note writing
@@ -62,14 +74,14 @@ vedio_extract/
 │   ├── preload.cjs                # Context bridge IPC
 │   ├── pythonManager.cjs          # Python backend lifecycle manager
 │   ├── build.cjs                  # Windows standalone .exe packager
-│   └── package.json               # Desktop dependencies and NSIS packaging config
+│   └── package.json               # Desktop dependencies and packaging config
 ├── release/                       # [Build Artifacts] Packaged desktop client
-│   ├── Video Extract Setup 1.0.0.exe # Windows native NSIS Setup installer (~80 MB)
-│   ├── VideoExtract-Windows-x64.zip  # Windows portable distribution ZIP (~115 MB)
-│   └── VideoExtract-win-x64/         # Unpacked portable executable folder (~188 MB)
+│   ├── vedioNoter-Setup-1.0.0.exe # Windows native NSIS Setup installer
+│   ├── vedioNoter-win-x64/        # Unpacked portable executable folder
+│   └── vedioNoter-1.0.0-mac.dmg   # macOS native disk image installer
 ├── web/                           # Web application
 │   ├── backend/
-│   │   ├── server.py              # Flask API server
+│   │   ├── server.py              # Flask API server & system endpoints
 │   │   └── tasks.py               # Thread pool asynchronous task runner
 │   └── frontend/                  # React 19 SPA frontend
 │       ├── src/
@@ -77,10 +89,10 @@ vedio_extract/
 │       │   ├── api.js             # API client & desktop bridge calls
 │       │   └── components/
 │       │       ├── Layout.jsx     # Header navigation & folder shortcut
-│       │       ├── SettingsModal.jsx # Visual configuration modal
+│       │       ├── SettingsModal.jsx # Visual configuration modal (LLM, Storage, Whisper)
 │       │       └── UploadZone.jsx # Drag-and-drop upload component
 │       └── dist/                  # Static frontend build artifacts
-├── config.yaml                    # Local configuration file (API keys, models, server)
+├── config.yaml                    # Local configuration file (API keys, models, storage)
 ├── config.example.yaml            # Configuration template
 ├── config.py                      # Centralized configuration loader
 ├── requirements.txt               # Python package dependencies
@@ -94,28 +106,25 @@ vedio_extract/
 
 ### Option A: Native Desktop App (Recommended)
 
-#### 1. Windows Native Installer (Standard Setup)
+#### 1. Windows Native Installer
 Download or run the setup installer:
 ```text
-release/Video Extract Setup 1.0.0.exe
+release/vedioNoter-Setup-1.0.0.exe
 ```
-Follow the installation wizard to choose the destination directory. The installer will automatically:
-- Create desktop shortcuts and Start Menu entries.
-- Register an uninstaller in Windows Settings / Control Panel.
+Follow the installation wizard to choose the destination directory. The installer will automatically create shortcuts and register an uninstaller.
 
 #### 2. Windows Portable / Direct Launch
-- **Double-click**: [`release/VideoExtract-win-x64/VideoExtract.exe`](file:///d:/WYS%20files/Operation/vedio_extract/release/VideoExtract-win-x64/VideoExtract.exe)
+- **Double-click**: `release/vedioNoter-win-x64/vedioNoter.exe`
 - **Or run script**: [`start_desktop.bat`](start_desktop.bat)
-- **Or extract ZIP**: `release/VideoExtract-Windows-x64.zip` on any x64 Windows machine.
 
-#### 3. macOS / Linux
-Grant execution permission and run:
+#### 3. macOS
+Run via script or open the DMG installer:
 ```bash
 chmod +x start_desktop.sh
 ./start_desktop.sh
 ```
 
-#### 4. Standalone Python App Mode (Zero Node.js dependency)
+#### 4. Standalone Python App Mode
 Launch the native window directly via Python:
 ```bash
 python desktop_app.py
@@ -135,20 +144,19 @@ bash setup.sh medium           # 1.5GB, higher accuracy
 bash setup.sh large-v3-turbo   # 1.6GB, best performance
 ```
 
-`setup.sh` automatically installs [uv](https://docs.astral.sh/uv/), sets up Python 3.11 virtual environment, downloads pre-compiled `whisper.cpp` binaries, `ffmpeg`, and the specified model weights.
-
-#### 2. Set DeepSeek API Key
-Copy the configuration template and add your API key:
+#### 2. Set LLM API Key & Model
+Copy the configuration template and edit your preferences:
 ```bash
 cp config.example.yaml config.yaml
 ```
-Alternatively, set the environment variable:
+Or set environment variables:
 ```bash
-export DEEPSEEK_API_KEY="sk-your-key-here"
+export LLM_API_KEY="sk-your-key-here"
+# or export DEEPSEEK_API_KEY="sk-your-key-here"
 ```
 
 #### 3. Run Pipeline
-Place your `.mp4` video files into the `vedio/` directory, then run:
+Place your `.mp4` video files into your configured video directory (`vedio/` by default), then run:
 
 ```bash
 # Run full pipeline: transcription + note generation
@@ -159,12 +167,12 @@ uv run python run_all.py --language zh
 uv run python transcribe.py --language zh
 
 # Step 2: Generate notes (choose style: general / stem)
-uv run python summarize.py output/ --style stem
+uv run python summarize.py --style stem
 ```
 
 Output files:
-- `output/<video_name>.md`: Raw speech transcript with timestamps.
-- `output/<video_name>.note.md`: Structured AI study note.
+- `<transcript_dir>/<video_name>.md`: Raw speech transcript with timestamps.
+- `<note_dir>/<video_name>.note.md`: Structured AI study note.
 
 ---
 
@@ -188,13 +196,16 @@ http://localhost:8765
 To recompile or package the desktop client after modifying code:
 
 ```bash
-# Package the native Windows NSIS Setup installer (Video Extract Setup 1.0.0.exe)
+# Package the native Windows NSIS Setup installer (release/vedioNoter-Setup-1.0.0.exe)
 npm run build:installer
 
-# Assemble the portable unpacked binary folder (release/VideoExtract-win-x64)
+# Package macOS DMG & ZIP
+npm run build:installer:mac
+
+# Assemble the portable unpacked binary folder (release/vedioNoter-win-x64)
 npm run build:exe
 
-# Rebuild frontend assets only
+# Rebuild frontend assets
 npm run build:frontend
 ```
 
@@ -202,22 +213,35 @@ npm run build:frontend
 
 ## ⚙️ Configuration (`config.yaml`)
 
-All runtime options are centralized in `config.yaml`. Environment variables override file settings:
+All runtime options are centralized in `config.yaml`:
 
 ```yaml
-deepseek:
-  api_key: ""                         # Falls back to DEEPSEEK_API_KEY environment variable
+# Universal LLM Provider Configuration
+llm:
+  provider: "deepseek"                # deepseek / openai / siliconflow / qwen / moonshot / zhipu / ollama / openrouter / custom
   base_url: "https://api.deepseek.com"
-  model: "deepseek-v4-pro"
-  max_chars_per_chunk: 30000
+  api_key: ""                         # Falls back to LLM_API_KEY or DEEPSEEK_API_KEY
+  model: "deepseek-chat"
+  temperature: 0.3
+  max_tokens: 4096
 
+# Customizable Storage & Output Directories
+storage:
+  video_dir: "vedio"                  # Input video folder
+  audio_temp_dir: "audio_temp"        # Intermediate WAV audio cache
+  transcript_dir: "output"            # Speech transcript output folder
+  note_dir: "output"                  # Academic notes output folder
+
+# Whisper Speech-to-Text
 whisper:
-  model: "small"                      # Default Whisper model
+  model: "small"                      # Default Whisper model: tiny, base, small, medium, large-v3-turbo
 
+# Keyframe Extraction
 keyframe:
   scene_threshold: 0.3                # Scene detection sensitivity (0.0 - 1.0)
   max_frames: 20                      # Maximum extracted keyframes per video
 
+# Web & Desktop Backend Server
 server:
   host: "0.0.0.0"
   port: 8765
