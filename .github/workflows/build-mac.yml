@@ -89,8 +89,17 @@ jobs:
           path: release-assets
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-assets/*
-          prerelease: true
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release exists for tag $TAG, uploading assets..."
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            echo "Creating new release for tag $TAG..."
+            gh release create "$TAG" release-assets/* \
+              --title "vedioNoter $TAG" \
+              --prerelease \
+              --generate-notes
+          fi
