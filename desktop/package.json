@@ -1,21 +1,21 @@
 {
-  "name": "video-extract-desktop",
-  "productName": "Video Extract",
-  "appId": "com.videoextract.desktop",
+  "name": "vedionoter-desktop",
+  "productName": "vedioNoter",
+  "appId": "com.vedionoter.app",
   "version": "1.0.0",
-  "description": "Video Extract 跨平台桌面客户端 (Win & Mac)",
+  "description": "vedioNoter 视频转文字与 AI 学习笔记桌面客户端 (Win & Mac)",
   "main": "main.cjs",
-  "author": "Antigravity",
+  "author": "vedioNoter",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
     "build:exe": "node build.cjs",
-    "dist:installer": "electron-builder --win --x64",
-    "dist:mac": "electron-builder --mac"
+    "dist:installer": "electron-builder --win --x64 --publish never",
+    "dist:mac": "electron-builder --mac --publish never"
   },
   "build": {
-    "appId": "com.videoextract.desktop",
-    "productName": "Video Extract",
+    "appId": "com.vedionoter.app",
+    "productName": "vedioNoter",
     "directories": {
       "output": "../release"
     },
@@ -32,7 +32,8 @@
         "zip"
       ],
       "icon": "icons/icon.png",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "vedioNoter-${version}-mac.${ext}"
     },
     "win": {
       "target": [
@@ -43,19 +44,20 @@
           ]
         }
       ],
-      "icon": "icons/icon.png"
+      "icon": "icons/icon.png",
+      "artifactName": "vedioNoter-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Video Extract",
+      "shortcutName": "vedioNoter",
       "runAfterFinish": true
     }
   },
   "devDependencies": {
-    "electron": "^20.18.3",
+    "electron": "^33.4.11",
     "electron-builder": "^26.15.3"
   }
 }

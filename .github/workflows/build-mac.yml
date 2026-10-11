@@ -1,4 +1,4 @@
-name: Build Desktop Clients (macOS & Release)
+name: Build Desktop Clients (Windows & macOS Release)
 
 on:
   workflow_dispatch:
@@ -33,11 +33,64 @@ jobs:
           npm install
           npm run dist:mac
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: macos-dist
+          path: |
             release/*.dmg
             release/*.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Frontend
+        run: |
+          cd web/frontend
+          npm install
+          npm run build
+
+      - name: Build Windows NSIS Setup
+        run: |
+          cd desktop
+          npm install
+          npm run dist:installer
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-dist
+          path: |
+            release/*.exe
+
+  publish-release:
+    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dist
+          path: release-assets
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-dist
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
           prerelease: true
+          generate_release_notes: true
