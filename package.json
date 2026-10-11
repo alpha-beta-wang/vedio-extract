@@ -9,6 +9,7 @@
     "build:exe": "cd desktop && node build.cjs",
     "build:installer": "cd desktop && npx electron-builder --win --x64",
     "build:installer:mac": "cd desktop && npx electron-builder --mac",
+    "build:engine": "python build_engine.py",
     "build:frontend": "cd web/frontend && npm run build"
   }
 }

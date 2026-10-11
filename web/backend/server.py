@@ -8,12 +8,25 @@ import sys
 from pathlib import Path
 
 # 将项目根目录加入 sys.path
-PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+if getattr(sys, "frozen", False):
+    exe_dir = Path(sys.executable).resolve().parent
+    if (exe_dir.parent / "web").exists() or (exe_dir.parent / "config.py").exists():
+        PROJECT_DIR = exe_dir.parent
+    else:
+        PROJECT_DIR = exe_dir
+else:
+    PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+
 sys.path.insert(0, str(PROJECT_DIR))
 
 import requests
 from flask import Flask, request, jsonify, send_file
-from flask_cors import CORS
+
+try:
+    from flask_cors import CORS
+    has_flask_cors = True
+except ImportError:
+    has_flask_cors = False
 
 from config import (
     get_api_key,
@@ -35,7 +48,25 @@ from web.backend.tasks import (
 )
 
 app = Flask(__name__, static_folder=None)
-CORS(app)
+
+if has_flask_cors:
+    CORS(app)
+else:
+    @app.after_request
+    def _add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
+
+    @app.before_request
+    def _handle_cors_options():
+        if request.method == "OPTIONS":
+            resp = app.make_default_options_response()
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return resp
 
 
 # ============================================================
@@ -397,7 +428,22 @@ def system_info():
 # 静态文件（前端构建产物）
 # ============================================================
 
-FRONTEND_DIST = PROJECT_DIR / "web" / "frontend" / "dist"
+def _find_frontend_dist() -> Path:
+    candidates = [
+        PROJECT_DIR / "web" / "frontend" / "dist",
+        Path(sys.executable).resolve().parent.parent / "web" / "frontend" / "dist",
+        Path(sys.executable).resolve().parent / "web" / "frontend" / "dist",
+        Path.cwd() / "web" / "frontend" / "dist",
+    ]
+    for c in candidates:
+        if c.exists() and (c / "index.html").exists():
+            return c
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
+
+FRONTEND_DIST = _find_frontend_dist()
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")

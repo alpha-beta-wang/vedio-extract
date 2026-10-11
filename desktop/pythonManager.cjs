@@ -125,75 +125,65 @@ class PythonManager {
     });
   }
 
-  async startBackend() {
-    const isRunning = await this.checkHealth();
-    if (isRunning) {
-      console.log(`[PythonManager] 后端服务已在端口 ${this.port} 运行`);
-      return { ok: true };
+  findBackendExecutable() {
+    const isWin = process.platform === "win32";
+    const exeName = isWin ? "vedionoter-engine.exe" : "vedionoter-engine";
+
+    const candidates = [
+      path.join(process.resourcesPath || "", "engine", exeName),
+      path.join(this.projectDir, "engine", exeName),
+      path.join(this.projectDir, "dist", "vedionoter-engine", exeName),
+      path.join(path.dirname(process.execPath || ""), "resources", "engine", exeName),
+      path.join(path.dirname(process.execPath || ""), "engine", exeName),
+    ];
+
+    for (const p of candidates) {
+      if (p && fs.existsSync(p)) return p;
     }
+    return null;
+  }
 
-    const pythonPath = this.findPython();
-    let serverScript = path.join(this.projectDir, "web", "backend", "server.py");
-    if (!fs.existsSync(serverScript) && process.resourcesPath) {
-      serverScript = path.join(process.resourcesPath, "web", "backend", "server.py");
-    }
-    console.log(`[PythonManager] 尝试启动服务: ${pythonPath} "${serverScript}"`);
-
-    if (!fs.existsSync(serverScript)) {
-      const err = `未找到后端服务器入口文件: ${serverScript}。\n请确认安装包完整。`;
-      console.error(`[PythonManager] ${err}`);
-      this.lastError = err;
-      return { ok: false, error: err };
-    }
-
-    const env = {
-      ...process.env,
-      PYTHONUNBUFFERED: "1",
-      PYTHONIOENCODING: "utf-8",
-      FLASK_PORT: String(this.port),
-      FLASK_HOST: "127.0.0.1",
-    };
-
+  async _spawnAndMonitor(cmd, args, env) {
     let spawnError = null;
     let stderrOutput = "";
 
     try {
-      this.process = spawn(pythonPath, [serverScript], {
+      this.process = spawn(cmd, args, {
         cwd: this.projectDir,
         env,
         stdio: ["pipe", "pipe", "pipe"],
       });
     } catch (e) {
-      this.lastError = `执行 Python 失败 (${pythonPath}): ${e.message}`;
+      this.lastError = `执行程序失败 (${cmd}): ${e.message}`;
       return { ok: false, error: this.lastError };
     }
 
     this.process.on("error", (err) => {
       spawnError = err;
-      this.lastError = `Python 启动错误: ${err.message}`;
+      this.lastError = `进程错误: ${err.message}`;
       console.error("[PythonManager] 进程错误:", err);
     });
 
     this.process.stdout.on("data", (data) => {
       const line = data.toString().trim();
-      if (line) console.log(`[Flask] ${line}`);
+      if (line) console.log(`[Backend] ${line}`);
     });
 
     this.process.stderr.on("data", (data) => {
       const line = data.toString().trim();
       stderrOutput += line + "\n";
-      if (line) console.log(`[Flask] ${line}`);
+      if (line) console.log(`[Backend] ${line}`);
     });
 
-    // 轮询检查服务就绪状态 (最大等待 12 秒)
-    for (let i = 0; i < 30; i++) {
-      await new Promise((r) => setTimeout(r, 400));
+    // 轮询检查服务就绪状态 (200ms 间隔，最大 10 秒)
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 200));
       if (spawnError) {
-        this.lastError = `未能运行 Python 解释器 (${pythonPath}):\n${spawnError.message}\n请检查系统是否安装了 Python 3.10+。`;
+        this.lastError = `未能运行程序 (${cmd}):\n${spawnError.message}`;
         return { ok: false, error: this.lastError };
       }
       if (this.process && this.process.exitCode !== null) {
-        this.lastError = `Python 后端异常退出 (退出码 ${this.process.exitCode}):\n${stderrOutput.trim() || "未捕获到错误输出，请确认已安装 requirements.txt 依赖。"}`;
+        this.lastError = `后端异常退出 (退出码 ${this.process.exitCode}):\n${stderrOutput.trim() || "未捕获到错误输出。"}`;
         return { ok: false, error: this.lastError };
       }
       if (await this.checkHealth()) {
@@ -205,6 +195,46 @@ class PythonManager {
 
     this.lastError = `后端服务响应超时 (端口 ${this.port})。\n${stderrOutput.trim() || "未能成功建立连接。"}`;
     return { ok: false, error: this.lastError };
+  }
+
+  async startBackend() {
+    const isRunning = await this.checkHealth();
+    if (isRunning) {
+      console.log(`[PythonManager] 后端服务已在端口 ${this.port} 运行`);
+      return { ok: true };
+    }
+
+    const env = {
+      ...process.env,
+      PYTHONUNBUFFERED: "1",
+      PYTHONIOENCODING: "utf-8",
+      FLASK_PORT: String(this.port),
+      FLASK_HOST: "127.0.0.1",
+    };
+
+    // 1. 优先使用编译打包好的独立原生引擎（用户无需安装 Python 或任何依赖）
+    const standaloneExe = this.findBackendExecutable();
+    if (standaloneExe) {
+      console.log(`[PythonManager] 启动内置独立引擎: "${standaloneExe}"`);
+      return await this._spawnAndMonitor(standaloneExe, [], env);
+    }
+
+    // 2. 回退机制：通过 Python 运行 server.py（仅限本地开发环境）
+    const pythonPath = this.findPython();
+    let serverScript = path.join(this.projectDir, "web", "backend", "server.py");
+    if (!fs.existsSync(serverScript) && process.resourcesPath) {
+      serverScript = path.join(process.resourcesPath, "web", "backend", "server.py");
+    }
+    console.log(`[PythonManager] 尝试通过 Python 启动服务: ${pythonPath} "${serverScript}"`);
+
+    if (!fs.existsSync(serverScript)) {
+      const err = `未找到后端服务器入口文件: ${serverScript}。\n请确认安装包完整。`;
+      console.error(`[PythonManager] ${err}`);
+      this.lastError = err;
+      return { ok: false, error: err };
+    }
+
+    return await this._spawnAndMonitor(pythonPath, [serverScript], env);
   }
 
   stopBackend() {

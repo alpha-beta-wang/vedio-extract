@@ -46,6 +46,7 @@ if (fs.existsSync(path.join(DESKTOP_DIR, "icons"))) {
 // 5. 组装 Python 后端、配置与前端静态产物 (resources/)
 console.log("[4/4] 组装后端与静态资源 (resources/)...");
 const extraResources = [
+  { from: path.join(ROOT_DIR, "dist", "vedionoter-engine"), to: path.join(OUT_DIR, "resources", "engine") },
   { from: path.join(ROOT_DIR, "web", "frontend", "dist"), to: path.join(OUT_DIR, "resources", "web", "frontend", "dist") },
   { from: path.join(ROOT_DIR, "web", "backend"), to: path.join(OUT_DIR, "resources", "web", "backend") },
   { from: path.join(ROOT_DIR, "summarizer"), to: path.join(OUT_DIR, "resources", "summarizer") },

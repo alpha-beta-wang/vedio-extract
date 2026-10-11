@@ -75,10 +75,16 @@ def _run_transcription(
     try:
         _update(task_id, status="running", progress=5, message="提取音频...")
 
-        import imageio_ffmpeg
-        ffmpeg_path = project_dir / "tools" / "ffmpeg" / "ffmpeg.exe"
+        import shutil
+        ffmpeg_path = project_dir / "tools" / "ffmpeg" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
         if not ffmpeg_path.exists():
-            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+            try:
+                import imageio_ffmpeg
+                ffmpeg_path = Path(imageio_ffmpeg.get_ffmpeg_exe())
+            except Exception:
+                sys_ffmpeg = shutil.which("ffmpeg")
+                if sys_ffmpeg:
+                    ffmpeg_path = Path(sys_ffmpeg)
 
         from transcribe import extract_audio
         audio_dir = get_audio_temp_dir()

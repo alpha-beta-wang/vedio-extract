@@ -6,9 +6,11 @@ desktop/node_modules/
 web/frontend/node_modules/
 
 # 编译与打包构建产物
+build/
 dist/
 dist-desktop/
 release/
+*.spec
 web/frontend/dist/
 .vite/
 *.py[cod]

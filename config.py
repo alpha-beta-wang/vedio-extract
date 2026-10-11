@@ -5,7 +5,17 @@ from pathlib import Path
 
 import yaml
 
-_ROOT = Path(__file__).resolve().parent
+import sys
+
+if getattr(sys, "frozen", False):
+    exe_dir = Path(sys.executable).resolve().parent
+    if (exe_dir.parent / "config.example.yaml").exists():
+        _ROOT = exe_dir.parent
+    else:
+        _ROOT = exe_dir
+else:
+    _ROOT = Path(__file__).resolve().parent
+
 _EXAMPLE_PATH = _ROOT / "config.example.yaml"
 
 def _is_dir_writable(directory: Path) -> bool:
@@ -36,13 +46,48 @@ else:
     _CONFIG_PATH = _USER_DATA_DIR / "config.yaml"
     _DATA_BASE_DIR = _USER_DATA_DIR
 
+DEFAULT_CONFIG_TEMPLATE = """
+server:
+  host: 127.0.0.1
+  port: 8765
+
+llm:
+  provider: deepseek
+  api_key: ""
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  temperature: 0.3
+  max_tokens: 8192
+  max_chars_per_chunk: 30000
+
+storage:
+  video_dir: vedio
+  audio_temp_dir: audio_temp
+  transcript_dir: output
+  note_dir: output
+
+whisper:
+  model: small
+  available_models:
+    - tiny
+    - base
+    - small
+    - medium
+    - large-v3-turbo
+
+keyframe:
+  scene_threshold: 0.3
+  max_frames: 20
+"""
+
 if _CONFIG_PATH.exists():
     with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
         _cfg = yaml.safe_load(_f) or {}
-else:
-    # 首次使用：从模板复制
+elif _EXAMPLE_PATH.exists():
     with open(_EXAMPLE_PATH, "r", encoding="utf-8") as _f:
         _cfg = yaml.safe_load(_f) or {}
+else:
+    _cfg = yaml.safe_load(DEFAULT_CONFIG_TEMPLATE) or {}
 
 
 # -----------------------------------------------------------

@@ -29,6 +29,10 @@
     ],
     "extraResources": [
       {
+        "from": "../dist/vedionoter-engine",
+        "to": "engine"
+      },
+      {
         "from": "../web/frontend/dist",
         "to": "web/frontend/dist"
       },
