@@ -17,8 +17,10 @@
     "appId": "com.vedionoter.app",
     "productName": "vedioNoter",
     "directories": {
-      "output": "../release"
+      "output": "../release",
+      "buildResources": "build"
     },
+    "icon": "icons/icon.ico",
     "files": [
       "main.cjs",
       "preload.cjs",
@@ -98,11 +100,13 @@
       "shortcutName": "vedioNoter",
       "installerIcon": "icons/icon.ico",
       "uninstallerIcon": "icons/icon.ico",
+      "installerHeaderIcon": "icons/icon.ico",
       "runAfterFinish": true
     }
   },
   "devDependencies": {
     "electron": "^33.4.11",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "png-to-ico": "^3.0.2"
   }
 }
