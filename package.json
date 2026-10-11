@@ -1,6 +1,6 @@
 {
   "name": "vedionoter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "vedioNoter 跨平台桌面客户端与核心引擎 (Win & Mac)",
   "scripts": {
