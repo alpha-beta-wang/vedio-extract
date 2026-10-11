@@ -6,8 +6,35 @@ from pathlib import Path
 import yaml
 
 _ROOT = Path(__file__).resolve().parent
-_CONFIG_PATH = _ROOT / "config.yaml"
 _EXAMPLE_PATH = _ROOT / "config.example.yaml"
+
+def _is_dir_writable(directory: Path) -> bool:
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        test_file = directory / ".write_test"
+        test_file.touch()
+        test_file.unlink()
+        return True
+    except Exception:
+        return False
+
+_USER_DATA_DIR = Path.home() / "vedioNoter"
+
+# 如果 _ROOT 可写（例如本地源码运行或便携解压版），优先保存在 _ROOT
+# 如果 _ROOT 不可写（例如安装在 C:\Program Files 或只读环境），则保存在用户主目录
+if _is_dir_writable(_ROOT) and (_ROOT / "config.yaml").exists():
+    _CONFIG_PATH = _ROOT / "config.yaml"
+    _DATA_BASE_DIR = _ROOT
+elif (_USER_DATA_DIR / "config.yaml").exists():
+    _CONFIG_PATH = _USER_DATA_DIR / "config.yaml"
+    _DATA_BASE_DIR = _USER_DATA_DIR
+elif _is_dir_writable(_ROOT):
+    _CONFIG_PATH = _ROOT / "config.yaml"
+    _DATA_BASE_DIR = _ROOT
+else:
+    _USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _CONFIG_PATH = _USER_DATA_DIR / "config.yaml"
+    _DATA_BASE_DIR = _USER_DATA_DIR
 
 if _CONFIG_PATH.exists():
     with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
@@ -79,7 +106,7 @@ def get_storage_config() -> dict:
 def _resolve_dir(path_str: str) -> Path:
     p = Path(path_str.strip())
     if not p.is_absolute():
-        p = _ROOT / p
+        p = _DATA_BASE_DIR / p
     try:
         p.mkdir(parents=True, exist_ok=True)
     except Exception:
@@ -177,6 +204,7 @@ def save_config(new_config: dict) -> None:
             "max_chars_per_chunk": llm_cfg.get("max_chars_per_chunk", 30000),
         }
 
+    _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(_CONFIG_PATH, "w", encoding="utf-8") as _f:
         yaml.safe_dump(to_save, _f, allow_unicode=True, sort_keys=False)
     _cfg = to_save

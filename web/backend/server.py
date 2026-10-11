@@ -421,8 +421,8 @@ def main():
     print(f"  视频目录: {get_video_dir()}")
     print(f"  撰写输出: {get_transcript_dir()}")
     print(f"  笔记输出: {get_note_dir()}")
-    print(f"======================================================")
-    app.run(host=host, port=port, debug=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host=host, port=port, debug=debug, threaded=True)
 
 
 if __name__ == "__main__":
