@@ -31,13 +31,41 @@ if (fs.existsSync(origExe)) {
 }
 
 // 4. 将应用脚本放置到 resources/app
-console.log("[3/3] 组装应用代码资源 (resources/app)...");
-const filesToCopy = ["main.cjs", "preload.cjs", "pythonManager.cjs", "package.json"];
+console.log("[3/4] 组装应用代码资源 (resources/app)...");
+const filesToCopy = ["main.cjs", "preload.cjs", "pythonManager.cjs", "startup.html", "package.json"];
 for (const file of filesToCopy) {
-  fs.copyFileSync(path.join(DESKTOP_DIR, file), path.join(APP_DIR, file));
+  const src = path.join(DESKTOP_DIR, file);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(APP_DIR, file));
+  }
 }
 if (fs.existsSync(path.join(DESKTOP_DIR, "icons"))) {
   fs.cpSync(path.join(DESKTOP_DIR, "icons"), path.join(APP_DIR, "icons"), { recursive: true });
+}
+
+// 5. 组装 Python 后端、配置与前端静态产物 (resources/)
+console.log("[4/4] 组装后端与静态资源 (resources/)...");
+const extraResources = [
+  { from: path.join(ROOT_DIR, "web", "frontend", "dist"), to: path.join(OUT_DIR, "resources", "web", "frontend", "dist") },
+  { from: path.join(ROOT_DIR, "web", "backend"), to: path.join(OUT_DIR, "resources", "web", "backend") },
+  { from: path.join(ROOT_DIR, "summarizer"), to: path.join(OUT_DIR, "resources", "summarizer") },
+  { from: path.join(ROOT_DIR, "config.py"), to: path.join(OUT_DIR, "resources", "config.py") },
+  { from: path.join(ROOT_DIR, "config.example.yaml"), to: path.join(OUT_DIR, "resources", "config.example.yaml") },
+  { from: path.join(ROOT_DIR, "transcribe.py"), to: path.join(OUT_DIR, "resources", "transcribe.py") },
+  { from: path.join(ROOT_DIR, "summarize.py"), to: path.join(OUT_DIR, "resources", "summarize.py") },
+  { from: path.join(ROOT_DIR, "run_all.py"), to: path.join(OUT_DIR, "resources", "run_all.py") },
+  { from: path.join(ROOT_DIR, "requirements.txt"), to: path.join(OUT_DIR, "resources", "requirements.txt") },
+];
+
+for (const item of extraResources) {
+  if (fs.existsSync(item.from)) {
+    fs.mkdirSync(path.dirname(item.to), { recursive: true });
+    if (fs.statSync(item.from).isDirectory()) {
+      fs.cpSync(item.from, item.to, { recursive: true });
+    } else {
+      fs.copyFileSync(item.from, item.to);
+    }
+  }
 }
 
 console.log("\n======================================================");

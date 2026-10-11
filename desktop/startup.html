@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vedioNoter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      padding: 24px;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 36px 32px;
+      max-width: 580px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .logo-badge {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.3);
+    }
+    .logo-badge svg {
+      width: 34px;
+      height: 34px;
+      fill: none;
+      stroke: #ffffff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+    /* Loading View */
+    #loading-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status-text {
+      font-size: 14px;
+      color: #cbd5e1;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .tip-text {
+      font-size: 12px;
+      color: #64748b;
+    }
+    /* Error View */
+    #error-view {
+      display: none;
+      text-align: left;
+    }
+    .error-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 14px;
+    }
+    .error-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+    }
+    .error-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .error-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #fda4af;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 20px;
+      user-select: text;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    button {
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      padding: 9px 16px;
+      border: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+    }
+    .help-box {
+      background: rgba(30, 41, 59, 0.4);
+      border-left: 3px solid #38bdf8;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .help-box code {
+      background: #090d16;
+      color: #38bdf8;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      user-select: text;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-badge">
+      <svg viewBox="0 0 24 24">
+        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+      </svg>
+    </div>
+    <h1>vedioNoter</h1>
+    <p class="subtitle">视频转文字与 AI 学习笔记</p>
+
+    <!-- 启动中视图 -->
+    <div id="loading-view">
+      <div class="spinner"></div>
+      <div class="status-text" id="loading-status">正在启动后台服务...</div>
+      <div class="tip-text">正在初始化 Python 运行时环境，请稍候</div>
+    </div>
+
+    <!-- 错误诊断视图 -->
+    <div id="error-view">
+      <div class="error-badge">
+        <span>⚠</span> 启动异常
+      </div>
+      <div class="error-title">未能启动 Python 本地服务</div>
+      <div class="error-desc">程序需要 Python 3.10+ 及轻量后端依赖才能运行。您可以手动选择系统中的 Python 路径或重新尝试。</div>
+      <div class="error-box" id="error-message">正在检测错误详情...</div>
+
+      <div class="actions">
+        <button class="btn-primary" id="btn-select-python">
+          📁 手动选择 Python 路径
+        </button>
+        <button class="btn-secondary" id="btn-retry">
+          🔄 重试启动
+        </button>
+        <button class="btn-secondary" id="btn-download-python">
+          🌐 下载官方 Python
+        </button>
+      </div>
+
+      <div class="help-box">
+        💡 提示：如果已安装 Python，请确保已安装所需依赖：<br>
+        <code>pip install -r requirements.txt</code> 或 <code>pip install flask flask-cors requests pyyaml</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loadingView = document.getElementById("loading-view");
+    const errorView = document.getElementById("error-view");
+    const errorMessage = document.getElementById("error-message");
+    const loadingStatus = document.getElementById("loading-status");
+
+    function showError(err) {
+      loadingView.style.display = "none";
+      errorView.style.display = "block";
+      errorMessage.textContent = err || "未知启动错误，请确认系统环境。";
+    }
+
+    function showLoading(msg) {
+      errorView.style.display = "none";
+      loadingView.style.display = "flex";
+      if (msg) loadingStatus.textContent = msg;
+    }
+
+    if (window.electronAPI) {
+      if (window.electronAPI.onBackendError) {
+        window.electronAPI.onBackendError((err) => {
+          showError(err);
+        });
+      }
+
+      if (window.electronAPI.onBackendStatus) {
+        window.electronAPI.onBackendStatus((msg) => {
+          showLoading(msg);
+        });
+      }
+
+      document.getElementById("btn-select-python").addEventListener("click", async () => {
+        showLoading("正在验证指定的 Python 解释器...");
+        const res = await window.electronAPI.selectPythonPath();
+        if (!res || !res.ok) {
+          showError(res && res.error ? res.error : "未选择有效 Python 解释器");
+        }
+      });
+
+      document.getElementById("btn-retry").addEventListener("click", async () => {
+        showLoading("正在重新尝试启动后台服务...");
+        const res = await window.electronAPI.retryBackend();
+        if (!res || !res.ok) {
+          showError(res && res.error ? res.error : "重试启动失败");
+        }
+      });
+
+      document.getElementById("btn-download-python").addEventListener("click", () => {
+        window.electronAPI.openExternalUrl("https://www.python.org/downloads/");
+      });
+    }
+  </script>
+</body>
+</html>

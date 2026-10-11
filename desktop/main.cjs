@@ -4,14 +4,46 @@ const fs = require("fs");
 const PythonManager = require("./pythonManager.cjs");
 
 function findProjectRoot() {
+  if (app.isPackaged && fs.existsSync(path.join(process.resourcesPath, "web", "backend", "server.py"))) {
+    return process.resourcesPath;
+  }
+  const resourcesFromExe = path.join(path.dirname(app.getPath("exe")), "resources");
+  if (fs.existsSync(path.join(resourcesFromExe, "web", "backend", "server.py"))) {
+    return resourcesFromExe;
+  }
   let cur = __dirname;
   for (let i = 0; i < 6; i++) {
-    if (fs.existsSync(path.join(cur, "vedio")) && fs.existsSync(path.join(cur, "web"))) {
+    if (fs.existsSync(path.join(cur, "web", "backend", "server.py"))) {
       return cur;
     }
     cur = path.dirname(cur);
   }
   return path.resolve(__dirname, "..");
+}
+
+function getCustomPythonConfigPath() {
+  return path.join(app.getPath("userData"), "custom-python.json");
+}
+
+function loadPersistedPythonPath() {
+  try {
+    const p = getCustomPythonConfigPath();
+    if (fs.existsSync(p)) {
+      const data = JSON.parse(fs.readFileSync(p, "utf-8"));
+      if (data && data.pythonPath && fs.existsSync(data.pythonPath)) {
+        return data.pythonPath;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+function persistPythonPath(pythonPath) {
+  try {
+    const p = getCustomPythonConfigPath();
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, JSON.stringify({ pythonPath }), "utf-8");
+  } catch (_) {}
 }
 
 const PROJECT_DIR = findProjectRoot();
@@ -151,7 +183,10 @@ async function handleOpenVideoDialog() {
 }
 
 function createWindow() {
-  const iconPath = path.join(__dirname, "icons", "icon.png");
+  const isWin = process.platform === "win32";
+  const iconPath = isWin
+    ? path.join(__dirname, "icons", "icon.ico")
+    : path.join(__dirname, "icons", "icon.png");
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -169,7 +204,7 @@ function createWindow() {
       spellcheck: false,
     },
     show: false,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0b0f19",
   });
 
   mainWindow.once("ready-to-show", () => {
@@ -183,10 +218,10 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  const appUrl = `http://127.0.0.1:${BACKEND_PORT}`;
-  mainWindow.loadURL(appUrl).catch((err) => {
-    setTimeout(() => mainWindow && mainWindow.loadURL(appUrl), 1500);
-  });
+  const startupHtml = path.join(__dirname, "startup.html");
+  if (fs.existsSync(startupHtml)) {
+    mainWindow.loadFile(startupHtml);
+  }
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -261,6 +296,55 @@ ipcMain.handle("shell:open-path", async (_, targetPath) => {
   return { ok: true };
 });
 
+ipcMain.handle("python:select-path", async () => {
+  const isWin = process.platform === "win32";
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "选择系统 Python 解释器 (python.exe)",
+    properties: ["openFile"],
+    filters: isWin
+      ? [{ name: "Python 可执行文件", extensions: ["exe"] }, { name: "所有文件", extensions: ["*"] }]
+      : [{ name: "可执行文件", extensions: ["*"] }],
+  });
+
+  if (canceled || filePaths.length === 0) {
+    return { ok: false, error: "未选择文件" };
+  }
+
+  const selectedPath = filePaths[0];
+  pythonManager.setCustomPython(selectedPath);
+  persistPythonPath(selectedPath);
+
+  pythonManager.stopBackend();
+  const res = await pythonManager.startBackend();
+  if (res.ok) {
+    mainWindow?.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
+    return { ok: true };
+  } else {
+    mainWindow?.webContents.send("backend:error", res.error);
+    return { ok: false, error: res.error };
+  }
+});
+
+ipcMain.handle("python:retry", async () => {
+  pythonManager.stopBackend();
+  const res = await pythonManager.startBackend();
+  if (res.ok) {
+    mainWindow?.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
+    return { ok: true };
+  } else {
+    mainWindow?.webContents.send("backend:error", res.error);
+    return { ok: false, error: res.error };
+  }
+});
+
+ipcMain.handle("shell:open-external", async (_, url) => {
+  if (url && (url.startsWith("http:") || url.startsWith("https:"))) {
+    await shell.openExternal(url);
+    return { ok: true };
+  }
+  return { ok: false };
+});
+
 ipcMain.on("window:minimize", () => mainWindow?.minimize());
 ipcMain.on("window:maximize", () => {
   if (mainWindow?.isMaximized()) {
@@ -285,8 +369,19 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     buildMenu();
-    await pythonManager.startBackend();
     createWindow();
+
+    const persistedPython = loadPersistedPythonPath();
+    if (persistedPython) {
+      pythonManager.setCustomPython(persistedPython);
+    }
+
+    const res = await pythonManager.startBackend();
+    if (res.ok) {
+      mainWindow?.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
+    } else {
+      mainWindow?.webContents.send("backend:error", res.error);
+    }
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

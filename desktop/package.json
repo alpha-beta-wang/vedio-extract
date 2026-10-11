@@ -23,8 +23,47 @@
       "main.cjs",
       "preload.cjs",
       "pythonManager.cjs",
+      "startup.html",
       "package.json",
       "icons/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/frontend/dist",
+        "to": "web/frontend/dist"
+      },
+      {
+        "from": "../web/backend",
+        "to": "web/backend"
+      },
+      {
+        "from": "../summarizer",
+        "to": "summarizer"
+      },
+      {
+        "from": "../config.py",
+        "to": "config.py"
+      },
+      {
+        "from": "../config.example.yaml",
+        "to": "config.example.yaml"
+      },
+      {
+        "from": "../transcribe.py",
+        "to": "transcribe.py"
+      },
+      {
+        "from": "../summarize.py",
+        "to": "summarize.py"
+      },
+      {
+        "from": "../run_all.py",
+        "to": "run_all.py"
+      },
+      {
+        "from": "../requirements.txt",
+        "to": "requirements.txt"
+      }
     ],
     "mac": {
       "target": [
@@ -44,7 +83,7 @@
           ]
         }
       ],
-      "icon": "icons/icon.png",
+      "icon": "icons/icon.ico",
       "artifactName": "vedioNoter-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -53,6 +92,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "vedioNoter",
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
       "runAfterFinish": true
     }
   },

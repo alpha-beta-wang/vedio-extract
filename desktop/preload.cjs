@@ -16,6 +16,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
   closeWindow: () => ipcRenderer.send("window:close"),
   isMaximized: () => ipcRenderer.invoke("window:is-maximized"),
 
+  selectPythonPath: () => ipcRenderer.invoke("python:select-path"),
+  retryBackend: () => ipcRenderer.invoke("python:retry"),
+  openExternalUrl: (url) => ipcRenderer.invoke("shell:open-external", url),
+
+  onBackendError: (callback) => {
+    const listener = (event, ...args) => callback(...args);
+    ipcRenderer.on("backend:error", listener);
+    return () => ipcRenderer.removeListener("backend:error", listener);
+  },
+  onBackendStatus: (callback) => {
+    const listener = (event, ...args) => callback(...args);
+    ipcRenderer.on("backend:status", listener);
+    return () => ipcRenderer.removeListener("backend:status", listener);
+  },
+
   onMenuTrigger: (channel, callback) => {
     const listener = (event, ...args) => callback(...args);
     ipcRenderer.on(channel, listener);
