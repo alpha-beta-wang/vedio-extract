@@ -10,7 +10,8 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "build:exe": "node build.cjs",
-    "dist:installer": "electron-builder --win --x64"
+    "dist:installer": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac"
   },
   "build": {
     "appId": "com.videoextract.desktop",
@@ -25,6 +26,14 @@
       "package.json",
       "icons/**/*"
     ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "icons/icon.png",
+      "category": "public.app-category.productivity"
+    },
     "win": {
       "target": [
         {
