@@ -27,6 +27,16 @@ jobs:
           npm install
           npm run build
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Standalone Backend Engine (macOS)
+        run: |
+          pip install -r requirements.txt pyinstaller
+          python build_engine.py
+
       - name: Build macOS DMG & ZIP
         run: |
           cd desktop
@@ -57,6 +67,16 @@ jobs:
           cd web/frontend
           npm install
           npm run build
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Standalone Backend Engine (Windows)
+        run: |
+          pip install -r requirements.txt pyinstaller
+          python build_engine.py
 
       - name: Build Windows NSIS Setup
         run: |
