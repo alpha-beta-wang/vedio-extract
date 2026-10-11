@@ -40,7 +40,7 @@ def main():
     # 转码参数
     parser.add_argument("--language", default=None,
                         help="语言代码 (zh/en/ja...)")
-    from config import get_llm_model, get_whisper_model
+    from config import get_llm_model, get_whisper_model, get_transcript_dir, get_note_dir
 
     parser.add_argument("--model", default=get_whisper_model(),
                         help=f"Whisper 模型大小 (默认 {get_whisper_model()})")
@@ -48,7 +48,7 @@ def main():
                         help="CPU 线程数")
     # 笔记整理参数
     parser.add_argument("--api-key", default=None,
-                        help="DeepSeek API key")
+                        help="LLM API key")
     parser.add_argument("--llm-model", default=get_llm_model(),
                         help="LLM 模型名称")
     parser.add_argument("--style", default="general", choices=["general", "stem"],
@@ -86,9 +86,14 @@ def main():
         print("\n[OK] 仅转码模式，流程结束。")
         return
 
+    transcript_dir = get_transcript_dir()
+    note_dir = get_note_dir()
+
     summarize_args = [
         str(PROJECT_DIR / "summarize.py"),
-        str(PROJECT_DIR / "output"),
+        str(transcript_dir),
+        "--output-dir",
+        str(note_dir),
     ]
     if args.api_key:
         summarize_args += ["--api-key", args.api_key]
@@ -106,8 +111,8 @@ def main():
 
     print(f"\n{'='*60}")
     print("  全流程完成！")
-    print(f"  转录原文: {PROJECT_DIR / 'output'}/*.md")
-    print(f"  学习笔记: {PROJECT_DIR / 'output'}/*.note.md")
+    print(f"  转录原文: {transcript_dir}/*.md")
+    print(f"  学习笔记: {note_dir}/*.note.md")
     print(f"{'='*60}")
 
 

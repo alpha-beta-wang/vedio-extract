@@ -11,32 +11,100 @@ _EXAMPLE_PATH = _ROOT / "config.example.yaml"
 
 if _CONFIG_PATH.exists():
     with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
-        _cfg = yaml.safe_load(_f)
+        _cfg = yaml.safe_load(_f) or {}
 else:
     # 首次使用：从模板复制
     with open(_EXAMPLE_PATH, "r", encoding="utf-8") as _f:
-        _cfg = yaml.safe_load(_f)
+        _cfg = yaml.safe_load(_f) or {}
 
 
 # -----------------------------------------------------------
-# DeepSeek API
+# LLM API (通用 OpenAI 兼容接口，兼容 DeepSeek / OpenAI / 硅基流动等)
 # -----------------------------------------------------------
 
-def get_api_key() -> str:
-    """返回 DeepSeek API key。优先环境变量，其次 config.yaml。"""
-    return os.environ.get("DEEPSEEK_API_KEY") or _cfg["deepseek"]["api_key"] or None
+def get_llm_config() -> dict:
+    llm = _cfg.get("llm") or _cfg.get("deepseek") or {}
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("DEEPSEEK_API_KEY") or llm.get("api_key") or ""
+    return {
+        "provider": llm.get("provider", "deepseek"),
+        "api_key": api_key,
+        "base_url": llm.get("base_url", "https://api.deepseek.com"),
+        "model": llm.get("model", "deepseek-chat"),
+        "temperature": float(llm.get("temperature", 0.3)),
+        "max_tokens": int(llm.get("max_tokens", 8192)),
+        "max_chars_per_chunk": int(llm.get("max_chars_per_chunk", 30000)),
+    }
+
+
+def get_api_key() -> str | None:
+    """返回 LLM API key。优先环境变量，其次配置文件。"""
+    key = get_llm_config()["api_key"]
+    return key if key else None
 
 
 def get_api_base_url() -> str:
-    return _cfg["deepseek"]["base_url"]
+    return get_llm_config()["base_url"]
 
 
 def get_llm_model() -> str:
-    return _cfg["deepseek"]["model"]
+    return get_llm_config()["model"]
 
 
 def get_max_chars_per_chunk() -> int:
-    return _cfg["deepseek"]["max_chars_per_chunk"]
+    return get_llm_config()["max_chars_per_chunk"]
+
+
+def get_llm_temperature() -> float:
+    return get_llm_config()["temperature"]
+
+
+def get_llm_max_tokens() -> int:
+    return get_llm_config()["max_tokens"]
+
+
+# -----------------------------------------------------------
+# 存储与目录配置 (Storage Directories)
+# -----------------------------------------------------------
+
+def get_storage_config() -> dict:
+    storage = _cfg.get("storage") or {}
+    return {
+        "video_dir": storage.get("video_dir", "vedio"),
+        "audio_temp_dir": storage.get("audio_temp_dir", "audio_temp"),
+        "transcript_dir": storage.get("transcript_dir", "output"),
+        "note_dir": storage.get("note_dir", "output"),
+    }
+
+
+def _resolve_dir(path_str: str) -> Path:
+    p = Path(path_str.strip())
+    if not p.is_absolute():
+        p = _ROOT / p
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return p
+
+
+def get_video_dir() -> Path:
+    """返回视频输入目录。"""
+    return _resolve_dir(get_storage_config()["video_dir"])
+
+
+def get_audio_temp_dir() -> Path:
+    """返回提取音频缓存目录。"""
+    return _resolve_dir(get_storage_config()["audio_temp_dir"])
+
+
+def get_transcript_dir() -> Path:
+    """返回语音转写/撰写输出目录。"""
+    return _resolve_dir(get_storage_config()["transcript_dir"])
+
+
+def get_note_dir() -> Path:
+    """返回结构化笔记输出目录。"""
+    return _resolve_dir(get_storage_config()["note_dir"])
 
 
 # -----------------------------------------------------------
@@ -44,11 +112,13 @@ def get_max_chars_per_chunk() -> int:
 # -----------------------------------------------------------
 
 def get_whisper_model() -> str:
-    return _cfg["whisper"]["model"]
+    return _cfg.get("whisper", {}).get("model", "small")
 
 
 def get_available_whisper_models() -> list[str]:
-    return list(_cfg["whisper"]["available_models"])
+    return list(_cfg.get("whisper", {}).get("available_models", [
+        "tiny", "base", "small", "medium", "large-v3-turbo"
+    ]))
 
 
 # -----------------------------------------------------------
@@ -56,11 +126,11 @@ def get_available_whisper_models() -> list[str]:
 # -----------------------------------------------------------
 
 def get_scene_threshold() -> float:
-    return _cfg["keyframe"]["scene_threshold"]
+    return float(_cfg.get("keyframe", {}).get("scene_threshold", 0.3))
 
 
 def get_max_keyframes() -> int:
-    return _cfg["keyframe"]["max_frames"]
+    return int(_cfg.get("keyframe", {}).get("max_frames", 20))
 
 
 # -----------------------------------------------------------
@@ -68,25 +138,45 @@ def get_max_keyframes() -> int:
 # -----------------------------------------------------------
 
 def get_server_host() -> str:
-    return os.environ.get("FLASK_HOST") or _cfg["server"]["host"]
+    return os.environ.get("FLASK_HOST") or _cfg.get("server", {}).get("host", "0.0.0.0")
 
 
 def get_server_port() -> int:
     env_port = os.environ.get("FLASK_PORT")
     if env_port:
         return int(env_port)
-    return _cfg["server"]["port"]
+    return int(_cfg.get("server", {}).get("port", 8765))
 
 
 def get_raw_config() -> dict:
-    """获取完整配置字典。"""
-    return _cfg
+    """获取完整配置字典，并附带动态解析的绝对路径。"""
+    cfg = dict(_cfg)
+    cfg["resolved_storage"] = {
+        "video_dir": str(get_video_dir()),
+        "audio_temp_dir": str(get_audio_temp_dir()),
+        "transcript_dir": str(get_transcript_dir()),
+        "note_dir": str(get_note_dir()),
+    }
+    cfg["llm"] = get_llm_config()
+    return cfg
 
 
 def save_config(new_config: dict) -> None:
     """将新配置写回 config.yaml。"""
     global _cfg
-    with open(_CONFIG_PATH, "w", encoding="utf-8") as _f:
-        yaml.safe_dump(new_config, _f, allow_unicode=True, sort_keys=False)
-    _cfg = new_config
+    to_save = dict(new_config)
+    to_save.pop("resolved_storage", None)
 
+    # 保持 deepseek 字段同步兼容
+    if "llm" in to_save and isinstance(to_save["llm"], dict):
+        llm_cfg = to_save["llm"]
+        to_save["deepseek"] = {
+            "api_key": llm_cfg.get("api_key", ""),
+            "base_url": llm_cfg.get("base_url", "https://api.deepseek.com"),
+            "model": llm_cfg.get("model", "deepseek-chat"),
+            "max_chars_per_chunk": llm_cfg.get("max_chars_per_chunk", 30000),
+        }
+
+    with open(_CONFIG_PATH, "w", encoding="utf-8") as _f:
+        yaml.safe_dump(to_save, _f, allow_unicode=True, sort_keys=False)
+    _cfg = to_save

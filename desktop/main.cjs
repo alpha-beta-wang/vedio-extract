@@ -26,9 +26,9 @@ function buildMenu() {
     ...(isMac
       ? [
           {
-            label: app.name,
+            label: "vedioNoter",
             submenu: [
-              { role: "about", label: "关于 Video Extract" },
+              { role: "about", label: "关于 vedioNoter" },
               { type: "separator" },
               { role: "services", label: "服务" },
               { type: "separator" },
@@ -36,7 +36,7 @@ function buildMenu() {
               { role: "hideOthers", label: "隐藏其他" },
               { role: "unhide", label: "全部显示" },
               { type: "separator" },
-              { role: "quit", label: "退出 Video Extract" },
+              { role: "quit", label: "退出 vedioNoter" },
             ],
           },
         ]
@@ -103,9 +103,15 @@ function buildMenu() {
       label: "帮助",
       submenu: [
         {
-          label: "打开使用说明",
+          label: "访问 GitHub 仓库",
           click: () => {
-            shell.openPath(path.join(PROJECT_DIR, "README.md"));
+            shell.openExternal("https://github.com/alpha-beta-wang/vedioNoter");
+          },
+        },
+        {
+          label: "使用文档",
+          click: () => {
+            shell.openPath(path.join(PROJECT_DIR, "README_CN.md"));
           },
         },
       ],
@@ -117,9 +123,9 @@ function buildMenu() {
 }
 
 async function handleOpenVideoDialog() {
+  if (!mainWindow) return [];
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: "选择待转录视频文件",
-    buttonLabel: "导入",
+    title: "选择待转录的视频文件",
     properties: ["openFile", "multiSelections"],
     filters: [
       { name: "视频文件", extensions: ["mp4", "mov", "mkv", "flv", "webm", "avi"] },
@@ -152,7 +158,7 @@ function createWindow() {
     height: 860,
     minWidth: 1000,
     minHeight: 640,
-    title: "Video Extract 视频文案提取与笔记整理",
+    title: "vedioNoter —— 视频转文字与 AI 学习笔记",
     titleBarStyle: isMac ? "hiddenInset" : "default",
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
@@ -187,8 +193,23 @@ function createWindow() {
   });
 }
 
+// -----------------------------------------------------------
+// IPC 通信处理
+// -----------------------------------------------------------
+
 ipcMain.handle("dialog:open-video", async () => {
   return await handleOpenVideoDialog();
+});
+
+ipcMain.handle("dialog:select-directory", async (_, defaultPath) => {
+  let target = defaultPath || PROJECT_DIR;
+  if (!path.isAbsolute(target)) target = path.join(PROJECT_DIR, target);
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: "选择目录",
+    defaultPath: fs.existsSync(target) ? target : PROJECT_DIR,
+    properties: ["openDirectory", "createDirectory"],
+  });
+  return res.canceled ? null : res.filePaths[0];
 });
 
 ipcMain.handle("dialog:save-file", async (_, defaultName) => {
@@ -222,7 +243,21 @@ ipcMain.handle("shell:open-folder", async (_, { type, name }) => {
       return { ok: true };
     }
   }
+  if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
   await shell.openPath(targetDir);
+  return { ok: true };
+});
+
+ipcMain.handle("shell:open-path", async (_, targetPath) => {
+  if (!targetPath) return { ok: false };
+  let resolved = targetPath;
+  if (!path.isAbsolute(resolved)) {
+    resolved = path.join(PROJECT_DIR, resolved);
+  }
+  if (!fs.existsSync(resolved)) {
+    fs.mkdirSync(resolved, { recursive: true });
+  }
+  await shell.openPath(resolved);
   return { ok: true };
 });
 

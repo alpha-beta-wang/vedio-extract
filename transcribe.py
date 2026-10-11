@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-视频转文字笔记
-使用 whisper.cpp 将 vedio/ 下的 .mp4 视频转录为 Markdown 笔记，输出到 output/ 文件夹。
+vedioNoter - 视频转文字笔记
+使用 whisper.cpp 将视频转录为 Markdown 笔记。
 """
 
 import argparse
@@ -16,6 +16,9 @@ from config import (
     get_max_keyframes,
     get_scene_threshold,
     get_whisper_model,
+    get_video_dir,
+    get_transcript_dir,
+    get_audio_temp_dir,
 )
 
 # 强制 UTF-8 输出，避免 Windows GBK 终端编码问题
@@ -287,9 +290,9 @@ def main():
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent
-    video_dir = base_dir / "vedio"
-    output_dir = base_dir / "output"
-    audio_dir = base_dir / "audio_temp"
+    video_dir = get_video_dir()
+    output_dir = get_transcript_dir()
+    audio_dir = get_audio_temp_dir()
     tools_dir = base_dir / "tools"
 
     whisper_exe = tools_dir / "whisper-cpp" / "Release" / "whisper-cli.exe"
@@ -310,12 +313,12 @@ def main():
         print("  请先将 ffmpeg.exe 放入 tools/ffmpeg/")
         return
 
-    output_dir.mkdir(exist_ok=True)
-    audio_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    audio_dir.mkdir(parents=True, exist_ok=True)
 
     video_files = find_video_files(video_dir)
     if not video_files:
-        print("vedio/ 文件夹下未找到 .mp4 文件。")
+        print(f"[{video_dir}] 目录下未找到 .mp4 文件。")
         return
 
     print(f"引擎: whisper.cpp  模型: {args.model}")

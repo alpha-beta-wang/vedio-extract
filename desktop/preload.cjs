@@ -5,9 +5,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   platform: process.platform,
 
   openVideoDialog: () => ipcRenderer.invoke("dialog:open-video"),
+  selectDirectory: (defaultPath) => ipcRenderer.invoke("dialog:select-directory", defaultPath),
   saveFileDialog: (defaultName) => ipcRenderer.invoke("dialog:save-file", defaultName),
   exportNote: (filename, content) => ipcRenderer.invoke("file:export-note", { filename, content }),
   openFolder: (type, name) => ipcRenderer.invoke("shell:open-folder", { type, name }),
+  openPath: (targetPath) => ipcRenderer.invoke("shell:open-path", targetPath),
 
   minimizeWindow: () => ipcRenderer.send("window:minimize"),
   maximizeWindow: () => ipcRenderer.send("window:maximize"),

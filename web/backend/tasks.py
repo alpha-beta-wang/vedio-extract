@@ -1,9 +1,15 @@
-"""异步任务管理：转录 & 笔记整理，支持进度轮询。"""
+"""异步任务管理：转录 & 笔记整理，支持进度轮询与动态目录。"""
 
 import threading
 import time
 import uuid
 from pathlib import Path
+
+from config import (
+    get_audio_temp_dir,
+    get_transcript_dir,
+    get_note_dir,
+)
 
 # ============================================================
 # task store
@@ -15,7 +21,8 @@ _tasks_lock = threading.Lock()
 
 def _update(task_id: str, **kwargs):
     with _tasks_lock:
-        tasks[task_id].update(kwargs)
+        if task_id in tasks:
+            tasks[task_id].update(kwargs)
 
 
 def get_task(task_id: str) -> dict | None:
@@ -74,8 +81,7 @@ def _run_transcription(
             ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
         from transcribe import extract_audio
-        audio_dir = project_dir / "audio_temp"
-        audio_dir.mkdir(exist_ok=True)
+        audio_dir = get_audio_temp_dir()
         audio_path = audio_dir / f"{video_path.stem}.wav"
 
         if not audio_path.exists():
@@ -88,8 +94,7 @@ def _run_transcription(
 
         whisper_exe = project_dir / "tools" / "whisper-cpp" / "Release" / "whisper-cli.exe"
         model_path = project_dir / "tools" / f"ggml-{model}.bin"
-        output_dir = project_dir / "output"
-        output_dir.mkdir(exist_ok=True)
+        output_dir = get_transcript_dir()
 
         def progress_callback(percent: int):
             mapped = 25 + int(percent * 0.65)  # 25 → 90
@@ -111,7 +116,7 @@ def _run_transcription(
                 ffmpeg_path = Path(imageio_ffmpeg.get_ffmpeg_exe())
             keyframes = extract_keyframes(video_path, output_dir, ffmpeg_path)
 
-        _update(task_id, progress=95 if extract_frames else 90, message="生成笔记...")
+        _update(task_id, progress=95 if extract_frames else 90, message="生成撰写文本...")
 
         # build markdown
         from transcribe import build_markdown
@@ -138,7 +143,7 @@ def _run_transcription(
 def start_summarization(
     md_path: Path,
     project_dir: Path,
-    api_key: str,
+    api_key: str | None = None,
     style: str = "general",
 ) -> str:
     """启动笔记整理任务，返回 task_id。"""
@@ -164,7 +169,7 @@ def start_summarization(
     return task_id
 
 
-def _run_summarization(task_id: str, md_path: Path, project_dir: Path, api_key: str, style: str = "general"):
+def _run_summarization(task_id: str, md_path: Path, project_dir: Path, api_key: str | None = None, style: str = "general"):
     try:
         _update(task_id, status="running", progress=10, message="读取转录...")
 
@@ -179,15 +184,16 @@ def _run_summarization(task_id: str, md_path: Path, project_dir: Path, api_key: 
         meta = read_metadata(md_path)
         title = meta.get("title", md_path.stem)
 
-        _update(task_id, progress=30, message="调用 AI 整理...")
+        _update(task_id, progress=30, message="调用通用 LLM 整理学习笔记...")
 
-        client = create_client(api_key)
+        client = create_client(api_key=api_key)
         user_msg = build_user_prompt(transcript, title)
         note = chat(client, get_system_prompt(style), user_msg)
 
-        _update(task_id, progress=90, message="保存笔记...")
+        _update(task_id, progress=90, message="保存结构化笔记...")
 
-        note_path = md_path.with_suffix(".note.md")
+        note_dir = get_note_dir()
+        note_path = note_dir / f"{md_path.stem}.note.md"
         note_path.write_text(note, encoding="utf-8")
 
         _update(

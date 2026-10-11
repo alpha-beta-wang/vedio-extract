@@ -24,7 +24,13 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from config import get_api_base_url, get_api_key, get_llm_model
+from config import (
+    get_api_base_url,
+    get_api_key,
+    get_llm_model,
+    get_transcript_dir,
+    get_note_dir,
+)
 from summarizer import process_file, summarize_transcript
 
 logger = logging.getLogger("summarize")
@@ -46,16 +52,18 @@ def find_transcript_files(target: Path) -> list[Path]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="将转录 MD 整理为结构化学习笔记"
+        description="vedioNoter - 将转录 MD 整理为结构化学术学习笔记"
     )
     parser.add_argument(
         "target",
-        help="转录文件 .md 或包含转录文件的 output/ 目录",
+        nargs="?",
+        default=None,
+        help="转录文件 .md 或包含转录文件的目录（默认使用配置中的 transcript_dir）",
     )
     parser.add_argument(
         "--api-key",
         default=get_api_key(),
-        help="DeepSeek API key（默认读取 config.yaml 或 DEEPSEEK_API_KEY 环境变量）",
+        help="LLM API key（默认读取 config.yaml 或环境变量）",
     )
     parser.add_argument(
         "--base-url",
@@ -81,15 +89,15 @@ def main():
     parser.add_argument(
         "--output-dir",
         default=None,
-        help="笔记输出目录（默认与转录文件同目录）",
+        help="笔记输出目录（默认使用配置中的 note_dir）",
     )
     args = parser.parse_args()
 
-    target = Path(args.target)
+    target = Path(args.target) if args.target else get_transcript_dir()
     files = find_transcript_files(target)
 
     if not files:
-        print("未找到转录 .md 文件。")
+        print(f"[{target}] 目录下未找到转录 .md 文件。")
         return
 
     print(f"找到 {len(files)} 个转录文件\n")
@@ -106,7 +114,7 @@ def main():
         print(f"[{i}/{len(files)}] {md_path.name}")
         print(f"{'-'*55}")
 
-        out_dir = Path(args.output_dir) if args.output_dir else None
+        out_dir = Path(args.output_dir) if args.output_dir else get_note_dir()
         result = process_file(
             md_path,
             api_key=args.api_key,
