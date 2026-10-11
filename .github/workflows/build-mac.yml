@@ -105,12 +105,13 @@ jobs:
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release exists for tag $TAG, updating..."
-            gh release edit "$TAG" "${NOTES_ARG[@]}" --title "vedioNoter $TAG"
+            gh release edit "$TAG" "${NOTES_ARG[@]}" --title "vedioNoter $TAG" --draft=false
             gh release upload "$TAG" release-assets/* --clobber
           else
             echo "Creating new release for tag $TAG..."
             gh release create "$TAG" release-assets/* \
               --title "vedioNoter $TAG" \
               --prerelease \
+              --draft=false \
               "${NOTES_ARG[@]}"
           fi
