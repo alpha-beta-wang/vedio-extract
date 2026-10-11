@@ -11,4 +11,6 @@
 - **Cross-Platform Native Desktop Packages**:
   - **Windows**: Native NSIS Setup wizard (`vedioNoter-Setup-1.1.0.exe`).
   - **macOS**: Native Apple Disk Image (`vedioNoter-1.1.0-mac.dmg`) and standalone archive (`vedioNoter-1.1.0-mac.zip`).
+- **Enhanced Desktop Launcher**: Bundled complete backend runtime assets and frontend distribution directly into installer packages; fixed startup hangs and elevated CPU usage; included native multi-resolution application icons and interactive Python environment diagnostics.
 - **Offline Speech-to-Text**: Powered by `whisper.cpp` (CPU-friendly, zero GPU or cloud requirement) with optional `ffmpeg` scene detection keyframe extraction.
+
