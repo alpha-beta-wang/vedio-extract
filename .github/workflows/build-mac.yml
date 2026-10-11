@@ -1,10 +1,13 @@
-name: Build Desktop Clients (Win & macOS)
+name: Build Desktop Clients (macOS & Release)
 
 on:
   workflow_dispatch:
   push:
     tags:
       - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   build-macos:
@@ -30,10 +33,11 @@ jobs:
           npm install
           npm run dist:mac
 
-      - name: Upload macOS Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: macOS-Release
-          path: |
+          files: |
             release/*.dmg
             release/*.zip
+          prerelease: true
