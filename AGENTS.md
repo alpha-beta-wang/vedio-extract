@@ -81,9 +81,9 @@ vedio_extract/
 │   └── icons/                     # Application icons (icon.png)
 │
 ├── release/                       # [Git-Ignored] Built desktop distribution packages
-│   ├── vedioNoter-Setup-1.0.0.exe # Windows native NSIS Setup installer
+│   ├── vedioNoter-Setup-1.1.0.exe # Windows native NSIS Setup installer
 │   ├── vedioNoter-win-x64/        # Unpacked portable executable folder
-│   └── vedioNoter-1.0.0-mac.dmg   # macOS native disk image
+│   └── vedioNoter-1.1.0-mac.dmg   # macOS native disk image
 │
 ├── tools/                         # [Git-Ignored] Local precompiled binaries and models
 │   ├── whisper-cpp/Release/       # whisper-cli binary
@@ -162,7 +162,7 @@ npm install
 npm start                # Run Electron desktop app in development
 
 # From project root:
-npm run build:installer      # Build native Windows NSIS Setup (release/vedioNoter-Setup-1.0.0.exe)
+npm run build:installer      # Build native Windows NSIS Setup (release/vedioNoter-Setup-1.1.0.exe)
 npm run build:installer:mac  # Build macOS DMG & ZIP
 npm run build:exe            # Assemble portable executable folder (release/vedioNoter-win-x64)
 ```

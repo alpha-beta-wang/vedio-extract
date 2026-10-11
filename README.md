@@ -40,9 +40,9 @@
 - All directories can be selected via native OS file dialogs and opened directly in Explorer/Finder.
 
 ### 5. Cross-Platform Desktop Client (`desktop/` / `release/`)
-- **Windows Native Setup Installer**: Standard installer (`release/vedioNoter-Setup-1.0.0.exe`) with customizable install directory, Start Menu and Desktop shortcuts, and Control Panel uninstaller registration.
+- **Windows Native Setup Installer**: Standard installer (`release/vedioNoter-Setup-1.1.0.exe`) with customizable install directory, Start Menu and Desktop shortcuts, and Control Panel uninstaller registration.
 - **Windows Portable Edition**: Pre-assembled portable executable at `release/vedioNoter-win-x64/vedioNoter.exe`.
-- **macOS Native Integration**: Run via `./start_desktop.sh` or install `vedioNoter-1.0.0-mac.dmg`.
+- **macOS Native Integration**: Run via `./start_desktop.sh` or install `vedioNoter-1.1.0-mac.dmg`.
 - **GUI Settings Modal**: Visually manage API keys, LLM providers, model selection, Whisper models, and storage folders.
 
 ### 6. Interactive Web Interface (`web/`)
@@ -76,9 +76,9 @@ vedio_extract/
 │   ├── build.cjs                  # Windows standalone .exe packager
 │   └── package.json               # Desktop dependencies and packaging config
 ├── release/                       # [Build Artifacts] Packaged desktop client
-│   ├── vedioNoter-Setup-1.0.0.exe # Windows native NSIS Setup installer
+│   ├── vedioNoter-Setup-1.1.0.exe # Windows native NSIS Setup installer
 │   ├── vedioNoter-win-x64/        # Unpacked portable executable folder
-│   └── vedioNoter-1.0.0-mac.dmg   # macOS native disk image installer
+│   └── vedioNoter-1.1.0-mac.dmg   # macOS native disk image installer
 ├── web/                           # Web application
 │   ├── backend/
 │   │   ├── server.py              # Flask API server & system endpoints
@@ -109,7 +109,7 @@ vedio_extract/
 #### 1. Windows Native Installer
 Download or run the setup installer:
 ```text
-release/vedioNoter-Setup-1.0.0.exe
+release/vedioNoter-Setup-1.1.0.exe
 ```
 Follow the installation wizard to choose the destination directory. The installer will automatically create shortcuts and register an uninstaller.
 
@@ -196,7 +196,7 @@ http://localhost:8765
 To recompile or package the desktop client after modifying code:
 
 ```bash
-# Package the native Windows NSIS Setup installer (release/vedioNoter-Setup-1.0.0.exe)
+# Package the native Windows NSIS Setup installer (release/vedioNoter-Setup-1.1.0.exe)
 npm run build:installer
 
 # Package macOS DMG & ZIP

@@ -40,9 +40,9 @@
 - 桌面客户端支持直接弹出系统文件夹选择对话框，并提供「打开目录」快捷按钮
 
 ### 5. 跨平台桌面客户端 (`desktop/` / `release/`)
-- **Windows 原生安装程序 (Setup)**：标准 Windows 安装向导 `release/vedioNoter-Setup-1.0.0.exe`，支持自定义安装目录，自动创建桌面和开始菜单图标，注册控制面板卸载程序。
+- **Windows 原生安装程序 (Setup)**：标准 Windows 安装向导 `release/vedioNoter-Setup-1.1.0.exe`，支持自定义安装目录，自动创建桌面和开始菜单图标，注册控制面板卸载程序。
 - **免安装绿色便携版**：解压即用目录 `release/vedioNoter-win-x64/vedioNoter.exe`。
-- **macOS 原生适配**：一键运行脚本 `./start_desktop.sh` 或使用 `release/vedioNoter-1.0.0-mac.dmg`。
+- **macOS 原生适配**：一键运行脚本 `./start_desktop.sh` 或使用 `release/vedioNoter-1.1.0-mac.dmg`。
 - **可视化设置面板**：无需手动编辑配置文件，在界面中直接切换大模型、调整目录、选择 Whisper 模型。
 
 ### 6. Web 前端界面 (`web/`)
@@ -76,9 +76,9 @@ vedio_extract/
 │   ├── build.cjs                  # Windows .exe 打包组装工具
 │   └── package.json               # 桌面端依赖与 NSIS 打包配置
 ├── release/                       # [构建产物] 打包好的桌面客户端
-│   ├── vedioNoter-Setup-1.0.0.exe # Windows 原生 NSIS 安装程序
+│   ├── vedioNoter-Setup-1.1.0.exe # Windows 原生 NSIS 安装程序
 │   ├── vedioNoter-win-x64/        # Windows 解压即用免安装程序
-│   └── vedioNoter-1.0.0-mac.dmg   # macOS 原生安装镜像
+│   └── vedioNoter-1.1.0-mac.dmg   # macOS 原生安装镜像
 ├── web/                           # Web 应用
 │   ├── backend/
 │   │   ├── server.py              # Flask API 后端服务器 & 系统路由
@@ -109,7 +109,7 @@ vedio_extract/
 #### 1. Windows 原生安装包（推荐普通用户）
 直接运行安装向导：
 ```text
-release/vedioNoter-Setup-1.0.0.exe
+release/vedioNoter-Setup-1.1.0.exe
 ```
 安装向导会自动创建开始菜单与桌面快捷方式。
 
@@ -192,7 +192,7 @@ http://localhost:8765
 若修改了桌面端或前端代码，可通过以下命令重新打包：
 
 ```bash
-# 构建 Windows 原生 NSIS 安装向导安装包 (release/vedioNoter-Setup-1.0.0.exe)
+# 构建 Windows 原生 NSIS 安装向导安装包 (release/vedioNoter-Setup-1.1.0.exe)
 npm run build:installer
 
 # 构建 macOS 原生 DMG 安装镜像与 ZIP

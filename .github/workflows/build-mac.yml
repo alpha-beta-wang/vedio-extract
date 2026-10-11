@@ -76,6 +76,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Download macOS Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -93,13 +96,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
+          NOTES_ARG=()
+          if [ -f "RELEASE_NOTES.md" ]; then
+            NOTES_ARG=(--notes-file RELEASE_NOTES.md)
+          else
+            NOTES_ARG=(--generate-notes)
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release exists for tag $TAG, uploading assets..."
+            echo "Release exists for tag $TAG, updating..."
+            gh release edit "$TAG" "${NOTES_ARG[@]}" --title "vedioNoter $TAG"
             gh release upload "$TAG" release-assets/* --clobber
           else
             echo "Creating new release for tag $TAG..."
             gh release create "$TAG" release-assets/* \
               --title "vedioNoter $TAG" \
               --prerelease \
-              --generate-notes
+              "${NOTES_ARG[@]}"
           fi

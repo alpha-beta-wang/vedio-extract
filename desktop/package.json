@@ -2,7 +2,7 @@
   "name": "vedionoter-desktop",
   "productName": "vedioNoter",
   "appId": "com.vedionoter.app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "vedioNoter 视频转文字与 AI 学习笔记桌面客户端 (Win & Mac)",
   "main": "main.cjs",
   "author": "vedioNoter",
