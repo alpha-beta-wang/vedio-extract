@@ -10,11 +10,7 @@ export default function Layout({ children }) {
 
   const handleOpenOutput = async () => {
     try {
-      if (window.electronAPI?.openPath) {
-        await window.electronAPI.openPath("output");
-      } else {
-        await openFolder("output");
-      }
+      await openFolder("note");
     } catch (e) {
       console.error(e);
     }
@@ -31,7 +27,7 @@ export default function Layout({ children }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
               </svg>
             </div>
-            <span className="text-sm">Video Extract</span>
+            <span className="text-sm">vedioNoter</span>
           </Link>
 
           <nav className="flex items-center gap-2">
@@ -45,7 +41,7 @@ export default function Layout({ children }) {
             )}
             <button
               onClick={handleOpenOutput}
-              title="打开输出文件夹"
+              title="打开笔记与输出文件夹"
               className="px-2.5 py-1.5 text-xs font-medium rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)] transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -78,7 +74,7 @@ export default function Layout({ children }) {
       {/* Footer */}
       <footer className="border-t border-[var(--border)] mt-12">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 text-center text-xs text-[var(--text-muted)]">
-          Video Extract — 将视频转为结构化学习笔记
+          vedioNoter — 将视频转为结构化学习笔记
         </div>
       </footer>
     </div>

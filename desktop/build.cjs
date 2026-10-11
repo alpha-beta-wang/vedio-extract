@@ -4,10 +4,10 @@ const path = require("path");
 const DESKTOP_DIR = __dirname;
 const ROOT_DIR = path.resolve(__dirname, "..");
 const ELECTRON_DIST = path.join(DESKTOP_DIR, "node_modules", "electron", "dist");
-const OUT_DIR = path.join(ROOT_DIR, "release", "VideoExtract-win-x64");
+const OUT_DIR = path.join(ROOT_DIR, "release", "vedioNoter-win-x64");
 const APP_DIR = path.join(OUT_DIR, "resources", "app");
 
-console.log("=== 开始构建 Windows 原生独立可执行文件 (VideoExtract.exe) ===");
+console.log("=== 开始构建 Windows 原生独立可执行文件 (vedioNoter.exe) ===");
 
 if (!fs.existsSync(ELECTRON_DIST)) {
   console.error("[X] 未找到 Electron 运行时: " + ELECTRON_DIST);
@@ -21,9 +21,9 @@ fs.mkdirSync(APP_DIR, { recursive: true });
 console.log("[1/3] 复制 Electron 引擎二进制文件...");
 fs.cpSync(ELECTRON_DIST, OUT_DIR, { recursive: true });
 
-// 3. 将 electron.exe 重命名为 VideoExtract.exe
+// 3. 将 electron.exe 重命名为 vedioNoter.exe
 const origExe = path.join(OUT_DIR, "electron.exe");
-const targetExe = path.join(OUT_DIR, "VideoExtract.exe");
+const targetExe = path.join(OUT_DIR, "vedioNoter.exe");
 if (fs.existsSync(origExe)) {
   if (fs.existsSync(targetExe)) fs.unlinkSync(targetExe);
   fs.renameSync(origExe, targetExe);

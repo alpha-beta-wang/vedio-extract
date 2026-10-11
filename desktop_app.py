@@ -37,7 +37,7 @@ def start_flask_thread(host: str, port: int):
     app.run(host=host, port=port, debug=False, use_reloader=False)
 
 
-def launch_desktop_window(url: str, title: str = "Video Extract"):
+def launch_desktop_window(url: str, title: str = "vedioNoter"):
     system = platform.system()
     print(f"[Desktop] 正在创建跨平台独立桌面窗口 ({system})...")
 
@@ -64,7 +64,7 @@ def launch_desktop_window(url: str, title: str = "Video Extract"):
                 browser_exe,
                 f"--app={url}",
                 "--window-size=1280,860",
-                f"--app-id=com.videoextract.desktop",
+                f"--app-id=com.vedionoter.desktop",
             ]
             return subprocess.Popen(cmd)
 
@@ -103,7 +103,7 @@ def main():
     url = f"http://{host}:{port}"
 
     print("=" * 60)
-    print("  Video Extract 视频文案提取与笔记整理 —— 桌面客户端")
+    print("  vedioNoter 视频文案提取与笔记整理 —— 桌面客户端")
     print("=" * 60)
 
     dist_dir = PROJECT_DIR / "web" / "frontend" / "dist"

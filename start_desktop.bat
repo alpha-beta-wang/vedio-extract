@@ -1,15 +1,20 @@
 @echo off
 chcp 65001 >nul
-title Video Extract 桌面客户端
+title vedioNoter 桌面客户端
 
 echo ======================================================
-echo    Video Extract 视频文案提取与笔记整理 - 桌面客户端
+echo    vedioNoter 视频文案提取与笔记整理 - 桌面客户端
 echo ======================================================
 echo.
 
 cd /d "%~dp0"
 
 :: 1. 优先启动原生打包好的 exe 独立程序
+if exist "release\vedioNoter-win-x64\vedioNoter.exe" (
+    echo [启动方式 1/3] 正在启动原生可执行程序 vedioNoter.exe ...
+    start "" "release\vedioNoter-win-x64\vedioNoter.exe"
+    exit /b 0
+)
 if exist "release\VideoExtract-win-x64\VideoExtract.exe" (
     echo [启动方式 1/3] 正在启动原生可执行程序 VideoExtract.exe ...
     start "" "release\VideoExtract-win-x64\VideoExtract.exe"
